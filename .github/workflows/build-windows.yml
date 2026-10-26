@@ -44,9 +44,15 @@ jobs:
       - name: Prepare Tauri app dir and CI config
         shell: pwsh
         run: |
-          # The repository keeps the Tauri app in `app/`; the CLI looks for `src-tauri`. A junction
-          # lets the CLI find it without touching the source tree.
-          cmd /c mklink /J src-tauri app
+          # The repository keeps the Tauri app in `app/`, but the Tauri CLI and Cargo both expect the
+          # app crate to be a workspace member under `src-tauri`. Copy it there and point the workspace
+          # at the copy (same depth, so the config's relative paths still resolve).
+          if (Test-Path src-tauri) { Remove-Item src-tauri -Recurse -Force }
+          Copy-Item app src-tauri -Recurse
+          $cargoToml = Get-Content Cargo.toml -Raw
+          $cargoToml = $cargoToml.Replace('"app",', '"src-tauri",')
+          Set-Content Cargo.toml $cargoToml -Encoding utf8
+          Select-String -Path Cargo.toml -Pattern "members" | Select-Object -First 1
           $base = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -AsHashtable
           $rel  = Get-Content src-tauri/tauri.release.conf.json -Raw | ConvertFrom-Json -AsHashtable
           function Merge($a, $b) {

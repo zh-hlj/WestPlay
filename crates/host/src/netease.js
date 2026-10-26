@@ -171,12 +171,14 @@
     return null
   }
   const findPlayback = () => playingNow() ?? sounding ?? inThePage()
-  const playing = () => playingNow() !== null || (pageIsPlaying() ?? false)
+  const playing = () =>
+    directTrack ? Boolean(directElement && !directElement.paused && !directElement.ended) : playingNow() !== null || (pageIsPlaying() ?? false)
   // What the truck's speakers should play: an element of this document (a page's own graph across documents may
   // play its silence), the playing ones in turn; no such element, nothing is taken (the page's own sound stays).
   let chosen = 0
   let unmuted = ''
   const mediaToPlay = () => {
+    if (directTrack) return null
     const here = [...KNOWN].filter((element) => element.ownerDocument === document && usable(element))
     const sounding = here.filter((element) => !element.muted)
     if (sounding.length > 0) return sounding[chosen % sounding.length]
@@ -195,15 +197,21 @@
     return Number.isFinite(number) && number >= 0 ? number : 0
   }
   const played = () => {
+    if (directTrack) return directElement ? seconds(directElement.currentTime) : 0
     const element = findPlayback()
     return element ? seconds(element.currentTime) : (barTimes()?.played ?? 0)
   }
   const length = () => {
+    if (directTrack) {
+      const duration = seconds(directElement?.duration)
+      return duration > 0 ? duration : (directTrack.durationMs ?? 0) / 1000
+    }
     const element = findPlayback()
     const duration = seconds(element?.duration)
     return duration > 0 ? duration : (barTimes()?.total ?? 0)
   }
   const volume = () => {
+    if (directTrack) return directElement ? Math.min(1, Math.max(0, directElement.volume)) : null
     const element = findPlayback()
     if (!element || typeof element.volume !== 'number') return null
     return element.muted ? 0 : Math.min(1, Math.max(0, element.volume))
@@ -218,7 +226,7 @@
 
   // TODO(verify): a song's own id in the player bar's link (`a[href*="/song?id=…"]`); a song the bar doesn't
   // link (still loading, an ad) has none and nothing of it is shown.
-  const track = () => {
+  const pageTrack = () => {
     const id = songId()
     const found = first(bar(), '.words')
     const meta = metadata()
@@ -235,10 +243,13 @@
     }
   }
 
+  const track = () => directTrack ?? pageTrack()
+
   // TODO(verify): where the page plays from, off its own address (`#/playlist?id=…`, `#/album?id=…`; the old
   // web player's route); a song's page plays from itself, said as none. Its name and the queue around it the
   // page's bar doesn't say.
   const context = () => {
+    if (directTrack) return directContext()
     const found = /#\/(playlist|album|artist)\?id=(\d+)/.exec(location.hash ?? '')
     if (!found) return null
     const kind = { playlist: 'playlist', album: 'album', artist: 'artist' }[found[1]]
@@ -559,6 +570,63 @@
     return element.paused ? element.play() : element.pause()
   }
 
+  // --- Playing it ourselves ----------------------------------------------------------------------------------------
+  //
+  // The old page's player can't be trusted for sound: on a player's PC (2026-10-26) its audio element was never
+  // loaded while a muted video played, and a scripted click is no tap for its autoplay fallback. So a song asked
+  // for is fetched as the page's own player would (`/api/song/enhance/player/url`, signed by its cookies) and
+  // played unmuted in an element of this script's: the WebView plays it (no Web Audio: another origin through it
+  // would be CORS-silent), the cabin shows it, and the page's own player is left alone.
+  let directTrack = null
+  let directElement = null
+  let directList = null
+  let directAt = 0
+  const directContext = () => (directList ? { id: directList.playlist, name: '', kind: 'playlist' } : null)
+  const directSong = async (song, playlist) => {
+    const answer = await get(`/api/song/enhance/player/url?id=${song}&ids=[${song}]&br=320000`).catch(() => null)
+    const found = answer?.data?.[0]
+    const url = typeof found?.url === 'string' ? found.url.replace(/^http:/, 'https:') : null
+    if (!url?.startsWith('https://')) return false
+    const detail = await get(`/api/song/detail?ids=[${song}]`).catch(() => null)
+    const item = detail?.songs?.[0]
+    if (!item) return false
+    if (!directElement) {
+      directElement = document.createElement('audio')
+      directElement.preload = 'auto'
+      document.documentElement.appendChild(directElement)
+      for (const name of ['play', 'pause', 'ended', 'seeked', 'loadedmetadata', 'timeupdate'])
+        directElement.addEventListener(name, () => {
+          tellPlayback()
+          tellState(true)
+        })
+    }
+    // The page's own player heard but not played over ours: the sound is one, this one.
+    const page = findPlayback()
+    if (page && !page.paused) page.pause()
+    directTrack = trackOf(item)
+    directList = playlist ? { playlist: String(playlist), tracks: null } : null
+    directAt = 0
+    directElement.volume = volumeWanted ?? 0.8
+    directElement.src = url
+    await directElement.play().catch(() => {})
+    tellPlayback()
+    tellState(true)
+    return true
+  }
+  const directStep = async (by) => {
+    if (!directTrack || !directList) return false
+    if (!directList.tracks) {
+      const found = await collection({ id: directList.playlist }).catch(() => null)
+      if (!found?.tracks?.length) return false
+      directList.tracks = found.tracks
+      directAt = Math.max(0, found.tracks.findIndex((each) => each.id === directTrack.id))
+    }
+    const next = directList.tracks[directAt + by]
+    if (!next) return false
+    directAt += by
+    return directSong(next.id, directList.playlist)
+  }
+
   // TODO(verify): the old player bar's own loop and shuffle controls: the loop button (`.icn-loop`, cycling
   // one/all/off by its title) and the shuffle one (`.icn-shuffle`, `[data-action="shuffle"]`); the page's own
   // icons change with it.
@@ -568,13 +636,37 @@
   const loopButton = () => first(bar(), '.icn-loop, [data-action="repeat"]')
 
   const CONTROLS = {
-    play: ({ song, playlist }) =>
-      song || playlist ? playOnPage(song, playlist) : playing() ? undefined : toggle(),
-    pause: () => (playing() ? toggle() : undefined),
-    resume: () => (playing() ? undefined : toggle()),
-    next: () => press(nextButton()),
-    previous: () => press(previousButton()),
+    play: ({ song, playlist }) => {
+      if (song) return directSong(song, playlist).then((played) => played || playOnPage(song, playlist))
+      if (playlist) return playOnPage(song, playlist)
+      return playing() ? undefined : directTrack ? directElement?.play() : toggle()
+    },
+    pause: () => {
+      if (directTrack) {
+        directElement?.pause()
+        tellPlayback()
+        tellState(true)
+        return
+      }
+      if (playing()) toggle()
+    },
+    resume: () => {
+      if (directTrack) {
+        directElement?.play().catch(() => {})
+        tellPlayback()
+        tellState(true)
+        return
+      }
+      if (!playing()) toggle()
+    },
+    next: () => (directTrack ? directStep(1) : press(nextButton())),
+    previous: () => (directTrack ? directStep(-1) : press(previousButton())),
     seek: ({ seconds: at }) => {
+      if (directTrack) {
+        if (directElement) directElement.currentTime = Math.max(0, Number(at) || 0)
+        tellPlayback()
+        return
+      }
       const element = findPlayback()
       if (!element) throw new Error('no media element')
       element.currentTime = Math.max(0, Number(at) || 0)
@@ -584,6 +676,11 @@
     // does), so the cab's is put back as it changes.
     volume: ({ percent }) => {
       volumeWanted = Math.min(1, Math.max(0, Number(percent) / 100))
+      if (directTrack) {
+        if (directElement) directElement.volume = volumeWanted
+        tellPlayback()
+        return
+      }
       const element = findPlayback()
       if (element) element.volume = volumeWanted
       tellPlayback()

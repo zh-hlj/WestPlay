@@ -127,7 +127,7 @@ jobs:
           set WEBVIEW2_USER_DATA_FOLDER=%~dp0webview2-data
           start "" "%~dp0westplay.exe"
           endlocal
-          "@ | Set-Content out/portable/启动(避让占用).bat -Encoding utf8
+          "@ | Set-Content -LiteralPath "out/portable/启动(避让占用).bat" -Encoding utf8
           Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.0-netease-zh-portable-msvc.zip -Force
 
       - name: Collect build outputs

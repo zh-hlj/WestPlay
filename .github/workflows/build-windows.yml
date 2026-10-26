@@ -1,0 +1,119 @@
+name: build-windows
+
+# Builds the WestPlay fork on a real Windows/MSVC runner (no local toolchain needed) and
+# produces: (1) an NSIS installer, (2) a portable zip. Manual runs also attach both to the
+# preview release, so they can be downloaded from the Releases page.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - name: Install JS dependencies
+        run: npm install
+
+      - name: Build game plugin (westplay.dll)
+        run: cargo build --release -p westplay-plugin
+
+      - name: Prepare Tauri app dir and CI config
+        shell: pwsh
+        run: |
+          # The repository keeps the Tauri app in `app/`; the CLI looks for `src-tauri`. A junction
+          # lets the CLI find it without touching the source tree.
+          cmd /c mklink /J src-tauri app
+          $base = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -AsHashtable
+          $rel  = Get-Content src-tauri/tauri.release.conf.json -Raw | ConvertFrom-Json -AsHashtable
+          function Merge($a, $b) {
+            foreach ($k in $b.Keys) {
+              if ($a[$k] -is [System.Collections.IDictionary] -and $b[$k] -is [System.Collections.IDictionary]) {
+                Merge $a[$k] $b[$k]
+              } else {
+                $a[$k] = $b[$k]
+              }
+            }
+          }
+          Merge $base $rel
+          $base.bundle.active = $true
+          $base.bundle.targets = @("nsis")
+          # No updater signing key on CI: skip updater artifacts (the installer itself is still made).
+          $base.bundle.createUpdaterArtifacts = $false
+          $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
+
+      - name: Build app and NSIS installer
+        run: npx tauri build --config src-tauri/tauri.ci.conf.json
+
+      - name: Assemble portable zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/portable/ui | Out-Null
+          Copy-Item target/release/westplay.exe out/portable/
+          if (Test-Path target/release/westplay.dll) { Copy-Item target/release/westplay.dll out/portable/ }
+          if (Test-Path target/release/WebView2Loader.dll) { Copy-Item target/release/WebView2Loader.dll out/portable/ }
+          Copy-Item ui/dist/* out/portable/ui/ -Recurse -Force
+          Copy-Item LICENSE out/portable/LICENSE.txt
+          Copy-Item THIRD_PARTY_LICENSES.md, THIRD_PARTY_NOTICES.md out/portable/
+          @"
+          WestPlay v2.0.3 中文 + 实验性网易云音乐（GitHub Actions / MSVC 构建）
+          =====================================================================
+          双击 westplay.exe 运行。若提示 WebView2 0x800700AA（请求的资源在使用中），
+          请先从系统托盘完全退出官方 WestPlay、结束残留的 msedgewebview2.exe，或重启电脑后再试。
+          若想同时运行官方版，可设置环境变量 WEBVIEW2_USER_DATA_FOLDER 指向独立目录后再启动。
+          构建时间：$(Get-Date -Format o)  提交：${{ github.sha }}
+          游戏内安装（ETS2 插件 westplay.dll）与网易云登录/播放需真机验证。
+          源码：${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}  许可：GPL-3.0-or-later
+          "@ | Set-Content out/portable/README-使用说明.txt -Encoding UTF8
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.0.3-netease-zh-portable-msvc.zip -Force
+
+      - name: Collect build outputs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/installer | Out-Null
+          Get-ChildItem target/release/bundle/nsis -Filter *.exe -ErrorAction SilentlyContinue |
+            Copy-Item -Destination out/installer/
+          Get-ChildItem out/installer | Select-Object Name, Length
+          Get-ChildItem target/release/bundle -Recurse -Filter *.exe -ErrorAction SilentlyContinue | Select-Object FullName
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: westplay-windows-msvc
+          path: |
+            out/installer/*.exe
+            out/WestPlay-2.0.3-netease-zh-portable-msvc.zip
+          if-no-files-found: error
+
+      - name: Attach to the preview release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.3-netease-zh-preview1
+          prerelease: true
+          fail_on_unmatched_files: false
+          files: |
+            out/installer/*.exe
+            out/WestPlay-2.0.3-netease-zh-portable-msvc.zip

@@ -114,6 +114,25 @@ fn apple_music_check(accounts: State<Accounts>) {
     accounts.0.apple_music.request(AccountAction::Check);
 }
 
+/// Opens NetEase Cloud Music's sign-in in a window on the desktop (a QR code, scanned with its phone app; the
+/// status then says when it's done).
+#[tauri::command]
+fn netease_sign_in(accounts: State<Accounts>) {
+    accounts.0.netease.request(AccountAction::SignIn);
+}
+
+/// Signs NetEase Cloud Music out.
+#[tauri::command]
+fn netease_sign_out(accounts: State<Accounts>) {
+    accounts.0.netease.request(AccountAction::SignOut);
+}
+
+/// Runs NetEase Cloud Music's web player (hidden), so the status says whether it's signed in.
+#[tauri::command]
+fn netease_check(accounts: State<Accounts>) {
+    accounts.0.netease.request(AccountAction::Check);
+}
+
 /// The maker's Kreosus page, where players support WestPlay's development.
 const SUPPORT_PAGE: &str = "https://kreosus.com/enes-less";
 
@@ -180,6 +199,9 @@ fn main() {
             apple_music_sign_in,
             apple_music_sign_out,
             apple_music_check,
+            netease_sign_in,
+            netease_sign_out,
+            netease_check,
             open_support_page,
             customize::customize_list,
             customize::add_wallpapers,

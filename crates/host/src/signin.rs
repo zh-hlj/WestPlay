@@ -98,6 +98,17 @@ pub const APPLE_MUSIC: Site = Site {
     not_yet: None,
     page_says: Some(include_str!("apple_music_sign_in.js")),
 };
+
+/// NetEase Cloud Music's sign-in: its own web player, where signing in is a dialog of the page (a QR code, scanned
+/// with the phone's app), so its address stays its home and the page's own script says when it's done
+/// (`netease_sign_in.js`, `page_says`).
+pub const NETEASE: Site = Site {
+    sign_in: "https://music.163.com/",
+    title: "Sign in to NetEase Cloud Music - WestPlay",
+    home: "https://music.163.com/",
+    not_yet: None,
+    page_says: Some(include_str!("netease_sign_in.js")),
+};
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).
@@ -565,6 +576,7 @@ mod tests {
         assert!(!says_signed_in(r#"{"signedIn":"yes"}"#));
         assert!(!says_signed_in("not json"));
         assert!(APPLE_MUSIC.page_says.is_some(), "its address says nothing");
+        assert!(NETEASE.page_says.is_some(), "its address never says it");
     }
 
     #[test]

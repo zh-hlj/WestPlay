@@ -1,0 +1,611 @@
+// WestPlay, in NetEase Cloud Music's web player (netease.rs): NetEase's own page, run hidden under the cab. The
+// NetEase Cloud Music app the player sees is WestPlay's own; this reads the page's player bar and its media
+// session, plays through the page's own buttons and player, and answers its questions from NetEase's own API,
+// as the page itself asks it:
+//
+// - What plays is the page's: its player bar (`#g_player`, in this top frame) says the song, its artists, its
+//   cover and its time; the page's own `<audio>` element is found and followed (`findPlayback`), and the OS's
+//   media session (`navigator.mediaSession.metadata`) says the same once the page has set it.
+// - Playing is the page's own: a play goes to the page's own route (`#/song?id=…`, `#/playlist?id=…`, loaded
+//   into `#g_iframe`) and presses the page's own Play; pause, resume, next, previous are its player bar's
+//   buttons; seeking and the volume are its media element's, so its queue and its own bookkeeping stay the
+//   page's.
+// - Questions (Home, a search, a playlist's or an album's page, a song's words) are asked of the same-origin
+//   API the page itself asks (`/api/...`), signed by the page's own cookies.
+//
+// Nothing of the account leaves the page: only whether it's signed in, and what the app shows (names, covers,
+// what plays). The page comes in two versions, the old web player and the new one NetEase put out in November
+// 2025, with no DOM in common: this script is written for the old one (`#g_player`); on the new one it still
+// says whether the account is signed in and answers questions, and nothing else (TODO(verify)).
+;(() => {
+  if (location.hostname !== 'music.163.com' || window.top !== window) return
+  const post = (message) => window.chrome?.webview?.postMessage(message)
+  const pageFetch = window.fetch.bind(window)
+  const stringify = JSON.stringify
+  const parse = JSON.parse
+  const NUMBER = /^\d+$/
+
+  const appears = (find, wait = 8000) =>
+    new Promise((resolve) => {
+      const started = Date.now()
+      const look = () => {
+        const found = find()
+        if (found || Date.now() - started > wait) resolve(found ?? null)
+        else setTimeout(look, 150)
+      }
+      look()
+    })
+  const text = (node) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim()
+  const first = (parent, selector) => parent?.querySelector(selector) ?? null
+  const all = (parent, selector) => [...(parent?.querySelectorAll(selector) ?? [])]
+  const must = (found) => {
+    if (!found) throw new Error('not on the page')
+    return found
+  }
+
+  // --- The page's player bar -----------------------------------------------------------------------------------
+  //
+  // TODO(verify): the old web player's player bar, at the bottom of this frame: `#g_player`; the play/pause
+  // button `.btns a.ply` while it's paused and `.pas` while it plays (the page swaps them); previous and next
+  // `.btns a.prv` and `.btns a.nxt`; the song's name and its artists in `.words` (`.name`, `.by a[href*=
+  // "/artist?id=…"]`), its cover in `.head img`, its time in `.time` (played in its `em`). The new web player has
+  // none of these.
+  const BAR = '#g_player'
+  const bar = () => document.querySelector(BAR)
+  const old = () => Boolean(bar())
+
+  const playButton = () => first(bar(), '.btns a.ply, .btns a.pas') ?? first(bar(), '[data-action="play"]')
+  // TODO(verify): `pas` in the play button's classes means it's playing (the button then pauses it).
+  const pageIsPlaying = () => {
+    const button = playButton()
+    if (button) return button.classList.contains('pas')
+    return navigator.mediaSession?.playbackState === 'playing' ? true : null
+  }
+
+  const songId = () => {
+    const link = first(bar(), 'a[href*="/song?id="]')
+    return /\/song\?id=(\d+)/.exec(link?.getAttribute('href') ?? '')?.[1] ?? null
+  }
+  const cover = () => {
+    // TODO(verify): `.head img`; the page may keep its own placeholder for a song without a cover.
+    const url = first(bar(), '.head img')?.getAttribute('src') ?? null
+    return https(url)
+  }
+  const artists = () => {
+    const words = first(bar(), '.words')
+    const links = all(words, 'a[href*="/artist?id="]').map((link) => text(link)).filter(Boolean)
+    if (links.length) return links
+    // TODO(verify): a song's artists as one line in `.by` ("Tarkan / X"), when it isn't links.
+    return text(first(words, '.by'))
+      .replace(/^[-–—\s]+/, '')
+      .split(/\s*\/\s*/)
+      .filter(Boolean)
+  }
+  // TODO(verify): the bar's time (`.time`, the played time in its `<em>`, the length after the `/`): a fallback
+  // until the page's media element is found (its own `currentTime`/`duration` are preferred).
+  const barTimes = () => {
+    const found = [...text(first(bar(), '.time')).matchAll(/(\d{1,3}):(\d{2})/g)].map(
+      ([, minute, second]) => Number(minute) * 60 + Number(second),
+    )
+    if (found.length >= 2) return { played: found[0], total: found[1] }
+    return found.length === 1 ? { played: found[0], total: 0 } : null
+  }
+
+  // --- The page's own sound element -----------------------------------------------------------------------------
+  //
+  // The old web player makes its own `<audio>` (it isn't in the player bar), so every element the page touches
+  // is kept: the one it plays, readied, or paused (as spotify.js does), and the one playing now.
+  const KNOWN = new Set()
+  let sounding = null
+  const keep = (element) => {
+    if (!(element instanceof HTMLMediaElement)) return
+    sounding = element
+    KNOWN.add(element)
+  }
+  const findPlayback = () => {
+    for (const element of KNOWN) if (!element.paused && !element.ended) return element
+    // TODO(verify): where the page's element is, should it not have been touched yet (`#g_player audio`, a
+    // detached element the page made); a video element, for a music video.
+    const inThePage = document.querySelector('#g_player audio, #g_player video, audio, video')
+    return sounding ?? KNOWN.values().next().value ?? inThePage
+  }
+  const mediaPlay = HTMLMediaElement.prototype.play
+  HTMLMediaElement.prototype.play = function (...args) {
+    keep(this)
+    return mediaPlay.apply(this, args)
+  }
+  addEventListener('playing', (event) => keep(event.target), true)
+
+  const playing = () => {
+    const element = findPlayback()
+    if (element) return !element.paused && !element.ended
+    return pageIsPlaying() ?? false
+  }
+  const seconds = (value) => {
+    const number = Number(value)
+    return Number.isFinite(number) && number >= 0 ? number : 0
+  }
+  const played = () => {
+    const element = findPlayback()
+    return element ? seconds(element.currentTime) : (barTimes()?.played ?? 0)
+  }
+  const length = () => {
+    const element = findPlayback()
+    const duration = seconds(element?.duration)
+    return duration > 0 ? duration : (barTimes()?.total ?? 0)
+  }
+  const volume = () => {
+    const element = findPlayback()
+    if (!element || typeof element.volume !== 'number') return null
+    return element.muted ? 0 : Math.min(1, Math.max(0, element.volume))
+  }
+
+  // --- What plays -------------------------------------------------------------------------------------------------
+  const https = (url) => {
+    const found = typeof url === 'string' ? url.replace(/^http:\/\//, 'https://') : null
+    return found?.startsWith('https://') ? found : null
+  }
+  const metadata = () => navigator.mediaSession?.metadata ?? null
+
+  // TODO(verify): a song's own id in the player bar's link (`a[href*="/song?id=…"]`); a song the bar doesn't
+  // link (still loading, an ad) has none and nothing of it is shown.
+  const track = () => {
+    const id = songId()
+    const found = first(bar(), '.words')
+    const meta = metadata()
+    const name = text(first(found, 'a.name, .name')) || text(meta?.title)
+    if (!id || !name) return null
+    const names = artists()
+    return {
+      id,
+      name,
+      artists: names.length ? names : [text(meta?.artist)].filter(Boolean),
+      album: text(meta?.album),
+      image: cover() ?? https(meta?.artwork?.at(-1)?.src),
+      durationMs: Math.round(length() * 1000),
+    }
+  }
+
+  // TODO(verify): where the page plays from, off its own address (`#/playlist?id=…`, `#/album?id=…`; the old
+  // web player's route); a song's page plays from itself, said as none. Its name and the queue around it the
+  // page's bar doesn't say.
+  const context = () => {
+    const found = /#\/(playlist|album|artist)\?id=(\d+)/.exec(location.hash ?? '')
+    if (!found) return null
+    const kind = { playlist: 'playlist', album: 'album', artist: 'artist' }[found[1]]
+    return kind ? { id: found[2], name: '', kind } : null
+  }
+
+  // The options: the page's own (its loop and shuffle buttons), as last asked for here: the old player bar's
+  // buttons cycle, they don't say which one it is (TODO(verify)).
+  let shuffle = null
+  let repeat = null
+  let volumeWanted = null
+
+  const playback = () => {
+    const song = track()
+    if (!song) return null
+    return {
+      track: song,
+      context: context(),
+      playing: playing(),
+      positionMs: Math.round(played() * 1000),
+      durationMs: Math.round(length() * 1000),
+      volume: volume(),
+      shuffle: Boolean(shuffle),
+      repeat: repeat ?? 'off',
+      // TODO(verify): the songs to come from the page's own queue (its play list, `#g_player`'s count button):
+      // the bar doesn't say them; none for now.
+      next: [],
+    }
+  }
+
+  // Said when what the app shows of it changes, and when the time jumps (a seek, or another song's start): the
+  // app runs the time on by itself while it plays.
+  let toldPlayback = ''
+  let lastPosition = 0
+  let lastAt = performance.now()
+  const tellPlayback = () => {
+    const now = playback()
+    const at = performance.now()
+    if (!now) {
+      if (toldPlayback !== 'null') {
+        toldPlayback = 'null'
+        post({ playback: null })
+      }
+      lastPosition = 0
+      lastAt = at
+      return
+    }
+    const expected = lastPosition + (now.playing ? at - lastAt : 0)
+    const jumped = Math.abs(now.positionMs - expected) > 1500
+    const shape = stringify({ ...now, positionMs: 0 })
+    if (jumped || shape !== toldPlayback) {
+      toldPlayback = shape
+      post({ playback: now })
+    }
+    lastPosition = now.positionMs
+    lastAt = at
+  }
+
+  // --- The account ----------------------------------------------------------------------------------------------
+  //
+  // TODO(verify): the page's own account, signed by its cookies: `/api/nuser/account/get` says `{account: null}`
+  // signed out and the account's profile signed in. Never anything of it but whether it's signed in.
+  let signedIn = null
+  const account = async () => {
+    try {
+      // TODO(verify): the request the page itself makes (`/api/nuser/account/get`), and its `credentials`.
+      const response = await pageFetch('/api/nuser/account/get', { credentials: 'same-origin' })
+      if (!response.ok) return
+      const json = await response.json()
+      signedIn = Boolean(json?.account)
+    } catch {
+      // Not this turn: said next time.
+    }
+  }
+  let toldState = ''
+  const tellState = (always = false) => {
+    if (signedIn === null) return
+    const state = { signedIn, playing: playing() }
+    const said = stringify(state)
+    if (said === toldState && !always) return
+    toldState = said
+    // `netease.js`'s own shape: the state under `state` (netease.rs reads the players' own flat shape too).
+    post({ state: parse(said) })
+  }
+
+  // --- Its answers, cut down to what the app shows --------------------------------------------------------------
+  //
+  // TODO(verify): NetEase's own API, as the page itself asks it, signed by the page's cookies: the addresses,
+  // the parameters and the fields below change with the page; the shapes here are the ones its old web player
+  // uses (`/api/search/get`, `/api/v6/playlist/detail`, `/api/song/detail`, `/api/song/lyric`). The page's
+  // content is in `#g_iframe` (a frame of its own, the same origin): not read here.
+  const artistNames = (list) => (list ?? []).map((artist) => artist?.name).filter(Boolean)
+  const albumOf = (song) => song?.album ?? song?.al ?? {}
+  const artistsOf = (song) => artistNames(song?.artists ?? song?.ar)
+  const durationMs = (song) => {
+    // The page's API gives a song's length in milliseconds (`duration`, or the new `dt`).
+    const found = Number(song?.duration ?? song?.dt)
+    return Number.isFinite(found) && found > 0 ? Math.round(found) : 0
+  }
+  const trackOf = (song) => {
+    if (!song?.id) return null
+    const album = albumOf(song)
+    const songArtists = artistsOf(song)
+    return {
+      id: String(song.id),
+      name: String(song.name ?? ''),
+      artists: songArtists,
+      album: String(album?.name ?? ''),
+      image: https(album?.picUrl ?? song?.picUrl),
+      durationMs: durationMs(song),
+    }
+  }
+  const playlistOf = (playlist) => {
+    if (!playlist?.id) return null
+    return {
+      id: String(playlist.id),
+      kind: 'playlist',
+      name: String(playlist.name ?? ''),
+      by: String(playlist.creator?.nickname ?? playlist.copywriter ?? ''),
+      image: https(playlist.coverImgUrl ?? playlist.picUrl),
+      description: typeof playlist.description === 'string' && playlist.description ? playlist.description : null,
+    }
+  }
+  const albumOfItem = (album) => {
+    if (!album?.id) return null
+    return {
+      id: String(album.id),
+      kind: 'album',
+      name: String(album.name ?? ''),
+      by: String(album.artist?.name ?? artistsOf(album).join(', ')),
+      image: https(album.picUrl ?? album.blurPicUrl),
+      description: null,
+    }
+  }
+  const artistOfItem = (artist) => {
+    if (!artist?.id) return null
+    return {
+      id: String(artist.id),
+      kind: 'artist',
+      name: String(artist.name ?? ''),
+      by: '',
+      image: https(artist.img1v1Url ?? artist.picUrl),
+      description: null,
+    }
+  }
+  const tracks = (list) => (list ?? []).map(trackOf).filter(Boolean)
+  const items = (list, convert) => (list ?? []).map(convert).filter(Boolean)
+
+  const get = async (path) => {
+    const response = await pageFetch(path, { credentials: 'same-origin' })
+    if (!response.ok) throw new Error(`${path}: ${response.status}`)
+    return await response.json()
+  }
+  const songDetail = async (ids) => {
+    if (ids.length === 0) return []
+    // TODO(verify): `/api/song/detail` with the ids as one `[1,2,3]` argument.
+    const answer = await get(`/api/song/detail?ids=${encodeURIComponent(`[${ids.join(',')}]`)}`)
+    return tracks(answer?.songs)
+  }
+
+  // TODO(verify): the page's own type numbers for a search (`/api/search/get`): songs 1, albums 10, artists
+  // 100, playlists 1000; and its `result` field for each.
+  const search = async ({ query }) => {
+    const asked = async (type) => {
+      const answer = await get(
+        `/api/search/get?s=${encodeURIComponent(query)}&type=${type}&offset=0&limit=20`,
+      )
+      return answer?.result ?? {}
+    }
+    const [songs, albums, artists, playlists] = await Promise.all([asked(1), asked(10), asked(100), asked(1000)])
+    return {
+      songs: tracks(songs?.songs),
+      albums: items(albums?.albums, albumOfItem),
+      artists: items(artists?.artists, artistOfItem),
+      playlists: items(playlists?.playlists, playlistOf),
+    }
+  }
+
+  // TODO(verify): the page's own home recommendations (`/api/personalized/playlist`, `/api/personalized/
+  // newsong`), which its own Home shows; each may fail on its own (signed out, no connection) and is left out.
+  const home = async () => {
+    const sections = []
+    const personalized = await get('/api/personalized/playlist?limit=12').catch(() => null)
+    const playlists = items(personalized?.result, playlistOf)
+    if (playlists.length) sections.push({ title: '推荐歌单', items: playlists })
+    const newsong = await get('/api/personalized/newsong?limit=12').catch(() => null)
+    const songs = tracks((newsong?.result ?? []).map((entry) => entry?.song ?? entry))
+    if (songs.length) {
+      sections.push({
+        title: '推荐新音乐',
+        items: songs.map((song) => ({
+          id: song.id,
+          kind: 'song',
+          name: song.name,
+          by: (song.artists ?? []).join(', '),
+          image: song.image ?? null,
+          description: null,
+        })),
+      })
+    }
+    return { sections }
+  }
+
+  // TODO(verify): a playlist's or an album's page: `/api/v6/playlist/detail` (its `trackIds`; the full songs
+  // from `/api/song/detail`) and `/api/album/<id>` (its `songs`). The id alone doesn't say which it is, so a
+  // playlist is tried first and an album then.
+  const collection = async ({ id }) => {
+    const playlist = await get(`/api/v6/playlist/detail?id=${id}&n=0&s=0`).catch(() => null)
+    if (playlist?.playlist?.id) {
+      const found = playlist.playlist
+      const ids = (found.trackIds ?? [])
+        .map((entry) => String(entry?.id ?? ''))
+        .filter((each) => NUMBER.test(each))
+        // A playlist may be thousands of songs long: the app shows a page's worth at a time.
+        .slice(0, 200)
+      return { item: playlistOf(found), tracks: await songDetail(ids) }
+    }
+    const album = await get(`/api/album/${id}`).catch(() => null)
+    if (album?.album?.id) {
+      return { item: albumOfItem(album.album), tracks: tracks(album.songs) }
+    }
+    throw new Error('not a page the app shows')
+  }
+
+  // A song's words: its timed lines (`[mm:ss.xxx]words`), line by line with when each is sung; none for a song
+  // without words. The page's own provider is NetEase's: not named.
+  const lyrics = async ({ song }) => {
+    // TODO(verify): `/api/song/lyric` and its `lv`/`kv`/`tv` parameters; its `lrc.lyric`.
+    const answer = await get(`/api/song/lyric?id=${song}&lv=1&kv=1&tv=-1`)
+    const text = String(answer?.lrc?.lyric ?? '')
+    const LRC = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g
+    const lines = []
+    for (const row of text.split('\n')) {
+      const words = row.replace(LRC, '').trim()
+      for (const found of row.matchAll(LRC)) {
+        const fraction = found[3] ? Number(`0.${found[3].padEnd(3, '0')}`) : 0
+        lines.push({ start: Number(found[1]) * 60 + Number(found[2]) + fraction, end: 0, text: words })
+      }
+    }
+    lines.sort((a, b) => a.start - b.start)
+    if (lines.length === 0) return { synced: false, lines: [] }
+    // TODO(verify): the page's translation lines (`tlyric`) and which language it is; not shown for now.
+    return { synced: true, lines, provider: '' }
+  }
+
+  const QUESTIONS = { home, search, lyrics, collection }
+  // An answer, asked of NetEase again once should it fail (a moment's trouble: a dropped connection); failed
+  // only then. `netease.js`'s own shape: the payload under `answer`, its id with it.
+  const answer = async (id, question) => {
+    const asked = QUESTIONS[question?.ask]
+    if (!asked) {
+      post({ answer: { id, failed: true } })
+      return
+    }
+    for (const wait of [0, 600]) {
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait))
+      try {
+        post({ answer: { id, [question.ask]: await asked(question) } })
+        return
+      } catch {
+        // Once more, or failed.
+      }
+    }
+    post({ answer: { id, failed: true } })
+  }
+
+  // --- Playing ----------------------------------------------------------------------------------------------------
+  //
+  // TODO(verify): the page's own routes (`#/song?id=…`, `#/playlist?id=…`), which the page loads into
+  // `#g_iframe` by itself: a play goes there and presses the page's own Play (all of a playlist's, or a song's
+  // row), so its queue and its own play count stay the page's.
+  const frame = () => {
+    try {
+      return document.querySelector('#g_iframe')?.contentDocument ?? null
+    } catch {
+      return null
+    }
+  }
+  const goto = (hash) => {
+    if (location.hash !== hash) location.hash = hash
+  }
+  const press = (element) => must(element).click()
+  const playOnPage = async (song, playlist) => {
+    if (playlist) {
+      goto(`#/playlist?id=${playlist}`)
+      // TODO(verify): the playlist page's own Play (`.u-btni-play`), in the content frame once its page loaded.
+      const button = await appears(() => first(frame(), '.u-btni-play, [data-action="play"]'), 8000)
+      if (!button) throw new Error('no play button')
+      if (!song) return button.click()
+      const row = await appears(() => first(frame(), `a[href*="/song?id=${song}"]`), 8000)
+      // TODO(verify): a song's row in a playlist's page: its own Play, beside its name.
+      return press(first(row?.closest('tr, .item, li'), '.ply, [data-action="play"]') ?? button)
+    }
+    goto(`#/song?id=${song}`)
+    // TODO(verify): a song's page's own Play (`[data-action="play"]`, `.u-btni-play`), once the frame loaded.
+    const button = await appears(() => first(frame(), '[data-action="play"], .u-btni-play'), 8000)
+    press(button)
+  }
+
+  const toggle = () => {
+    const button = playButton()
+    if (button) return button.click()
+    const element = findPlayback()
+    if (!element) throw new Error('no player')
+    return element.paused ? element.play() : element.pause()
+  }
+
+  // TODO(verify): the old player bar's own loop and shuffle controls: the loop button (`.icn-loop`, cycling
+  // one/all/off by its title) and the shuffle one (`.icn-shuffle`, `[data-action="shuffle"]`); the page's own
+  // icons change with it.
+  const nextButton = () => first(bar(), '.btns a.nxt, [data-action="next"]')
+  const previousButton = () => first(bar(), '.btns a.prv, [data-action="previous"]')
+  const shuffleButton = () => first(bar(), '[data-action="shuffle"], .icn-shuffle, .rdi')
+  const loopButton = () => first(bar(), '.icn-loop, [data-action="repeat"]')
+
+  const CONTROLS = {
+    play: ({ song, playlist }) =>
+      song || playlist ? playOnPage(song, playlist) : playing() ? undefined : toggle(),
+    pause: () => (playing() ? toggle() : undefined),
+    resume: () => (playing() ? undefined : toggle()),
+    next: () => press(nextButton()),
+    previous: () => press(previousButton()),
+    seek: ({ seconds: at }) => {
+      const element = findPlayback()
+      if (!element) throw new Error('no media element')
+      element.currentTime = Math.max(0, Number(at) || 0)
+      tellPlayback()
+    },
+    // The page's own volume, kept over the cab's: its next song may put its own back (TODO(verify) whether it
+    // does), so the cab's is put back as it changes.
+    volume: ({ percent }) => {
+      volumeWanted = Math.min(1, Math.max(0, Number(percent) / 100))
+      const element = findPlayback()
+      if (element) element.volume = volumeWanted
+      tellPlayback()
+    },
+    shuffle: ({ on }) => {
+      const button = shuffleButton()
+      if (button && shuffle !== null && shuffle !== Boolean(on)) button.click()
+      shuffle = Boolean(on)
+      tellPlayback()
+    },
+    repeat: ({ mode }) => {
+      const button = loopButton()
+      // The loop button cycles off -> all -> one -> off; pressed until the mode asked for (at most three).
+      for (let tries = 0; button && repeat !== null && repeat !== mode && tries < 3; tries++) button.click()
+      repeat = mode
+      tellPlayback()
+    },
+  }
+
+  // --- The truck's speakers ---------------------------------------------------------------------------------------
+  //
+  // The page's sound through the truck's own speakers (cab_sound.js, loaded first), told the speakers, the head
+  // and the camera by the host; what the speakers made of it said for the host's log, once each way.
+  const cab = window.westplayCabSound?.(() => findPlayback(), post)
+  let saidCab = ''
+  let quietSince = null
+  const tellCab = () => {
+    const isPlaying = playing()
+    const found = findPlayback()
+    const levels = cab?.level()
+    const heard = Array.isArray(levels) && levels.slice(0, 2).some((ear) => ear > 0.0005)
+    quietSince = isPlaying && levels && !heard ? (quietSince ?? Date.now()) : null
+    const now =
+      quietSince && Date.now() - quietSince > 4000
+        ? `silent while playing (${KNOWN.size} elements, taken one ${found?.paused ? 'paused' : 'playing'})`
+        : levels
+          ? `through the speakers (${found?.tagName?.toLowerCase() ?? 'media'})`
+          : isPlaying && !found
+            ? 'no media element found'
+            : ''
+    if (now && now !== saidCab) post({ speakers: (saidCab = now) })
+  }
+  if (cab) {
+    setInterval(() => {
+      cab.tick()
+      tellCab()
+    }, 250)
+  }
+  // How loud it is through the speakers, each ear (and the limiter's cut), for the live test (netease.rs).
+  window.westplaySpeakerLevel = () => cab?.level() ?? null
+  const CAB = {
+    speakers: (data) => cab?.speakers(data.speakers),
+    head: (data) => cab?.head(data),
+    outside: (data) => cab?.outside(data.on, data.distance),
+    equalizer: (data) => cab?.equalizer(data),
+    spectrum: (data) => cab?.spectrum(data.on),
+  }
+
+  // --- The app's commands, and the page's own sign-in -------------------------------------------------------------
+  window.chrome?.webview?.addEventListener('message', ({ data }) => {
+    // Not the page's to answer (a control it can't find): nothing said, the app's own state just doesn't change.
+    try {
+      if (CAB[data?.action]) CAB[data.action](data)
+      else if (data?.action === 'ask') answer(data.id, data.question)
+      else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})
+    } catch {
+      // The page's own, or nothing to press.
+    }
+  })
+
+  // TODO(verify): the old page's own "登录" (its sign-in: a QR code, in a window on the desktop).
+  const SIGN_IN = '#showLogin, .m-top .login, [data-action="login"]'
+  addEventListener(
+    'click',
+    (event) => {
+      if (!event.isTrusted || !event.target?.closest?.(SIGN_IN)) return
+      event.preventDefault()
+      event.stopPropagation()
+      post({ signIn: true })
+    },
+    true,
+  )
+
+  // --- Its page, ready ---------------------------------------------------------------------------------------------
+  //
+  // TODO(verify): the page's player bar appears once its own scripts have run; on the new web player it never
+  // does (nothing here is read then: the account, and the answers, still are). The page loaded anew: the host
+  // is told, and tells the cab again and the questions the page missed (`netease.rs`).
+  const start = async () => {
+    await appears(bar, 15000)
+    account()
+    setInterval(account, 5000)
+    post({ ready: true })
+    tellState(true)
+    tellPlayback()
+    setInterval(() => {
+      // The page's own volume put back over the cab's (TODO(verify): it may be set when a song starts).
+      const element = findPlayback()
+      const kept = volumeWanted !== null && element && Math.abs(element.volume - volumeWanted) > 0.01
+      if (kept) element.volume = volumeWanted
+      tellState()
+      tellPlayback()
+    }, 500)
+  }
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', start)
+  else start()
+})()

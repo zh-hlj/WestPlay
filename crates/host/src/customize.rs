@@ -25,7 +25,7 @@ const WALLPAPERS: &str = "wallpapers";
 const ICONS: &str = "icons";
 
 /// An icon's file name (without its extension), and the role the cabin page knows it by.
-pub const ICON_ROLES: [(&str, &str); 10] = [
+pub const ICON_ROLES: [(&str, &str); 11] = [
     ("maps", "maps"),
     ("music", "music"),
     ("spotify", "spotify"),
@@ -36,6 +36,9 @@ pub const ICON_ROLES: [(&str, &str); 10] = [
     ("weather", "weather"),
     ("youtube", "youtube"),
     ("youtube-music", "youtubeMusic"),
+    // NetEase Cloud Music: the file `netease.png` (or `.light`/`.dark`), the cabin page's role `netease`
+    // (shared/icons.ts's own).
+    ("netease", "netease"),
 ];
 
 /// The kinds of image a wallpaper can be.

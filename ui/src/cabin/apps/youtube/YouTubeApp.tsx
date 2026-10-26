@@ -64,7 +64,8 @@ export function YouTubeApp() {
   const [query, setQuery] = useState('')
   const typing = useKeyboard((state) => state.field?.id === FIELD)
   const language = languageOf(useLive((state) => state.gameLanguage))
-  useEffect(() => setLanguage(language), [language])
+  // YouTube's own words are English or Turkish: Chinese asks it for English.
+  useEffect(() => setLanguage(language === 'tr' ? 'tr' : 'en'), [language])
   // Left while watching: back to the video.
   useEffect(() => {
     if (useYouTube.getState().returnToPlayer) reopenPlayer(true)

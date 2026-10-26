@@ -93,34 +93,68 @@
 
   // --- The page's own sound element -----------------------------------------------------------------------------
   //
-  // The old web player makes its own `<audio>` (it isn't in the player bar), so every element the page touches
-  // is kept: the one it plays, readied, or paused (as spotify.js does), and the one playing now.
+  // The old web player makes its own media element (it isn't in the player bar), and sometimes a muted video
+  // beside the song (an ad, a visualiser): every element the page touches is kept, in this frame and in the
+  // same-origin frames its pages load in, and the one playing now is the one heard. Never a muted one (as
+  // spotify.js does): taken, the truck's speakers play its silence (a player's PC, 2026-10-26: NetEase played,
+  // silent, two elements, the taken one a playing video).
   const KNOWN = new Set()
   let sounding = null
   const keep = (element) => {
-    if (!(element instanceof HTMLMediaElement)) return
-    sounding = element
+    // A frame's own HTMLMediaElement isn't this frame's instance: the shape is checked, not the class.
+    if (!element || !('paused' in element) || !('muted' in element)) return
+    if (!element.muted) sounding = element
     KNOWN.add(element)
   }
-  const findPlayback = () => {
-    for (const element of KNOWN) if (!element.paused && !element.ended) return element
-    // TODO(verify): where the page's element is, should it not have been touched yet (`#g_player audio`, a
-    // detached element the page made); a video element, for a music video.
-    const inThePage = document.querySelector('#g_player audio, #g_player video, audio, video')
-    return sounding ?? KNOWN.values().next().value ?? inThePage
+  const playingNow = () =>
+    [...KNOWN].find((element) => !element.paused && !element.ended && !element.muted) ?? null
+  const MEDIA_EVENTS = ['loadedmetadata', 'canplay', 'playing', 'pause', 'waiting', 'stalled']
+  const watched = new WeakSet()
+  const watch = (win) => {
+    try {
+      if (!win || watched.has(win)) return
+      watched.add(win)
+      const prototype = win.HTMLMediaElement?.prototype
+      if (!prototype) return
+      const play = prototype.play
+      prototype.play = function (...args) {
+        keep(this)
+        return play.apply(this, args)
+      }
+      for (const name of MEDIA_EVENTS) win.document.addEventListener(name, (event) => keep(event.target), true)
+      win.addEventListener('playing', (event) => keep(event.target), true)
+    } catch {
+      // A frame not ours to touch.
+    }
   }
-  const mediaPlay = HTMLMediaElement.prototype.play
-  HTMLMediaElement.prototype.play = function (...args) {
-    keep(this)
-    return mediaPlay.apply(this, args)
+  const watchFrames = () => {
+    watch(window)
+    for (const element of document.querySelectorAll('iframe')) {
+      try {
+        watch(element.contentWindow)
+      } catch {
+        // Another origin.
+      }
+    }
   }
-  addEventListener('playing', (event) => keep(event.target), true)
-
-  const playing = () => {
-    const element = findPlayback()
-    if (element) return !element.paused && !element.ended
-    return pageIsPlaying() ?? false
+  watchFrames()
+  setInterval(watchFrames, 2000)
+  // TODO(verify): where the page's element is, should it not have been touched yet (`#g_player audio`, a
+  // detached element the page made): the first <audio> of this frame or of its same-origin frames.
+  const inThePage = () => {
+    const frames = [window, ...[...document.querySelectorAll('iframe')].map((frame) => frame.contentWindow)]
+    for (const win of frames) {
+      try {
+        const found = win?.document?.querySelector('#g_player audio, #g_player video, audio')
+        if (found) return found
+      } catch {
+        // Another origin.
+      }
+    }
+    return null
   }
+  const findPlayback = () => playingNow() ?? sounding ?? inThePage()
+  const playing = () => playingNow() !== null || (pageIsPlaying() ?? false)
   const seconds = (value) => {
     const number = Number(value)
     return Number.isFinite(number) && number >= 0 ? number : 0
@@ -373,6 +407,19 @@
     return { sections }
   }
 
+  // The account's own playlists (`/api/user/playlist`, after the page's own account): signed in, the lists
+  // NetEase's own app shows under My music, the liked-songs list among them; signed out, none (the app shows
+  // its sign-in pitch instead).
+  const library = async () => {
+    const account = await get('/api/nuser/account/get').catch(() => null)
+    const profile = account?.profile ?? account?.account ?? null
+    const uid = profile?.userId ?? profile?.id
+    if (!uid) throw new Error('not signed in')
+    const answer = await get(`/api/user/playlist?uid=${uid}&limit=100&offset=0`)
+    const playlists = items(answer?.playlist ?? answer?.more, playlistOf)
+    return { sections: [{ title: '\u6211\u7684\u6b4c\u5355', items: playlists }] }
+  }
+
   // TODO(verify): a playlist's or an album's page: `/api/v6/playlist/detail` (its `trackIds`; the full songs
   // from `/api/song/detail`) and `/api/album/<id>` (its `songs`). The id alone doesn't say which it is, so a
   // playlist is tried first and an album then.
@@ -415,7 +462,7 @@
     return { synced: true, lines, provider: '' }
   }
 
-  const QUESTIONS = { home, search, lyrics, collection }
+  const QUESTIONS = { home, search, lyrics, library, collection }
   // An answer, asked of NetEase again once should it fail (a moment's trouble: a dropped connection); failed
   // only then. `netease.js`'s own shape: the payload under `answer`, its id with it.
   const answer = async (id, question) => {
@@ -530,13 +577,13 @@
   let quietSince = null
   const tellCab = () => {
     const isPlaying = playing()
-    const found = findPlayback()
+    const found = playingNow() ?? findPlayback()
     const levels = cab?.level()
     const heard = Array.isArray(levels) && levels.slice(0, 2).some((ear) => ear > 0.0005)
     quietSince = isPlaying && levels && !heard ? (quietSince ?? Date.now()) : null
     const now =
       quietSince && Date.now() - quietSince > 4000
-        ? `silent while playing (${KNOWN.size} elements, taken one ${found?.paused ? 'paused' : 'playing'})`
+        ? `silent while playing (${KNOWN.size} elements, taken one ${found?.muted ? 'muted' : found?.paused ? 'paused' : 'playing'})`
         : levels
           ? `through the speakers (${found?.tagName?.toLowerCase() ?? 'media'})`
           : isPlaying && !found

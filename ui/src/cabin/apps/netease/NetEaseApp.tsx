@@ -223,7 +223,7 @@ function TabPage({ tab, shown, onSearch }: { tab: Tab; shown: boolean; onSearch(
     case 'search':
       return <Search onSearch={onSearch} />
     case 'mine':
-      return <Mine />
+      return <Mine shown={shown} />
   }
 }
 

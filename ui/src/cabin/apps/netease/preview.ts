@@ -187,10 +187,17 @@ function lyrics(): NeteaseAnswers['lyrics'] {
   }
 }
 
+/** Mine, signed in: the account's own lists (the preview has a few). */
+function library(): NeteaseAnswers['library'] {
+  return { sections: [{ title: '我的歌单', items: PLAYLISTS.map((_, index) => playlist(index)) }] }
+}
+
 function answer(question: NeteaseQuestion): NeteaseAnswers[NeteaseQuestion['ask']] {
   switch (question.ask) {
     case 'home':
       return home()
+    case 'library':
+      return library()
     case 'search':
       return search(question.query)
     case 'collection':

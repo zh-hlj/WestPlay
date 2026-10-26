@@ -203,7 +203,7 @@ function CollectionPage({ item }: { item: NeteaseItem }) {
 }
 
 /** Mine: the account, signed in or out (NetEase's sign-in is its own: a QR code in a window on the PC). */
-export function Mine() {
+export function Mine({ shown }: { shown: boolean }) {
   const text = useText()
   const account = useAccount()
   const signingIn = useNetease((state) => state.signingIn)
@@ -211,6 +211,7 @@ export function Mine() {
   if (account === 'in') {
     return (
       <PageBody>
+        <MineLibrary shown={shown} />
         <section className="ne-mine">
           <div className="ne-mine-head">
             <span className="ne-mine-avatar" aria-hidden>
@@ -241,6 +242,20 @@ export function Mine() {
         </section>
       )}
     </PageBody>
+  )
+}
+
+/** Mine's own lists, signed in: the account's playlists (NetEase's own API), each opening as a page. */
+function MineLibrary({ shown }: { shown: boolean }) {
+  const asked = useAsked({ ask: 'library' }, useShownAgain(shown))
+  return (
+    <Answered asked={asked} rows>
+      {(answer: NeteaseAnswers['library']) =>
+        answer.sections.length > 0 ? (
+          answer.sections.map((section, index) => <Shelf key={`${section.title}-${index}`} section={section} />)
+        ) : null
+      }
+    </Answered>
   )
 }
 

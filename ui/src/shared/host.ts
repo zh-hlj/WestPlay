@@ -916,12 +916,14 @@ export interface NeteaseCollection {
  * page (its id: NetEase's own API doesn't say which, its page tries a playlist and then an album). */
 export type NeteaseQuestion =
   | { ask: 'home' }
+  | { ask: 'library' }
   | { ask: 'search'; query: string }
   | { ask: 'lyrics'; song: string }
   | { ask: 'collection'; id: string }
 
 export interface NeteaseAnswers {
   home: NeteaseHome
+  library: NeteaseHome
   search: NeteaseResults
   collection: NeteaseCollection
   lyrics: Lyrics

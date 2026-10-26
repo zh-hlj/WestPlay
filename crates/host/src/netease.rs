@@ -116,6 +116,8 @@ pub enum Question {
     Collection {
         id: String,
     },
+    /// The account's own playlists, signed in: its lists of songs (the liked-songs list among them).
+    Library,
 }
 
 impl Question {
@@ -126,6 +128,7 @@ impl Question {
             Question::Search { query } => (1..=200).contains(&query.chars().count()),
             Question::Lyrics { song } => is_id(song),
             Question::Collection { id } => is_id(id),
+            Question::Library => true,
         }
     }
 }
@@ -392,6 +395,8 @@ pub struct Answer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub collection: Option<Collection>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub library: Option<Home>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lyrics: Option<crate::lyrics::Lyrics>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub failed: bool,
@@ -402,6 +407,7 @@ impl Answer {
         self.home = self.home.map(Home::checked);
         self.search = self.search.map(Results::checked);
         self.collection = self.collection.and_then(Collection::checked);
+        self.library = self.library.map(Home::checked);
         self.lyrics = self.lyrics.map(crate::lyrics::Lyrics::checked);
         self
     }
@@ -717,7 +723,7 @@ fn read_message(message: &str) -> Option<Message> {
         let known = said == "no media element found"
             || said.starts_with("through the speakers (")
             || said.starts_with("silent while playing (");
-        return (known && said.len() <= 60).then(|| Message::Speakers(said.to_owned()));
+        return (known && said.len() <= 90).then(|| Message::Speakers(said.to_owned()));
     }
     if let Some(answer) = value.get("answer") {
         // Two shapes are read: the payload under `answer`, its id with it (`netease.js`'s own:

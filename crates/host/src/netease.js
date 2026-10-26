@@ -25,6 +25,20 @@
   const parse = JSON.parse
   const NUMBER = /^\d+$/
 
+  // NetEase's old web player runs its sound through Web Audio (its effects). In the hidden WebView a context
+  // may start asleep and no tap comes to wake it: every one made while this script runs is woken as it is made.
+  for (const name of ['AudioContext', 'webkitAudioContext']) {
+    const Original = window[name]
+    if (typeof Original !== 'function') continue
+    const Wake = function (...args) {
+      const context = new Original(...args)
+      context.resume?.().catch(() => {})
+      return context
+    }
+    Wake.prototype = Original.prototype
+    window[name] = Wake
+  }
+
   const appears = (find, wait = 8000) =>
     new Promise((resolve) => {
       const started = Date.now()
@@ -155,6 +169,15 @@
   }
   const findPlayback = () => playingNow() ?? sounding ?? inThePage()
   const playing = () => playingNow() !== null || (pageIsPlaying() ?? false)
+  // What the truck's speakers should play: an element of this document (a page's own graph across documents may
+  // play its silence), the playing ones in turn; no such element, nothing is taken (the page's own sound stays).
+  let chosen = 0
+  const mediaToPlay = () => {
+    const here = [...KNOWN].filter(
+      (element) => element.ownerDocument === document && !element.paused && !element.ended && !element.muted,
+    )
+    return here.length > 0 ? here[chosen % here.length] : null
+  }
   const seconds = (value) => {
     const number = Number(value)
     return Number.isFinite(number) && number >= 0 ? number : 0
@@ -572,15 +595,42 @@
   //
   // The page's sound through the truck's own speakers (cab_sound.js, loaded first), told the speakers, the head
   // and the camera by the host; what the speakers made of it said for the host's log, once each way.
-  const cab = window.westplayCabSound?.(() => findPlayback(), post)
+  const cab = window.westplayCabSound?.(() => mediaToPlay(), post)
   let saidCab = ''
   let quietSince = null
+  let debugAt = 0
+  // The elements as the debug line says them: which one is taken, where it is, and what it is doing.
+  const detail = (element) => ({
+    tag: element?.tagName?.toLowerCase() ?? null,
+    here: element ? element.ownerDocument === document : null,
+    muted: element?.muted ?? null,
+    volume: Math.round((element?.volume ?? 0) * 100) / 100,
+    paused: element?.paused ?? null,
+    ready: element?.readyState ?? null,
+    at: Math.round(element?.currentTime ?? 0),
+    length: Math.round(element?.duration ?? 0),
+    src: String(element?.currentSrc ?? element?.src ?? '').replace(/^https?:\/\//, '').slice(0, 70),
+  })
+  const debug = (why) => {
+    if (Date.now() - debugAt < 4000) return
+    debugAt = Date.now()
+    post({
+      debug: `${why} chosen=${chosen} ctx=${cab?.state?.() ?? '?'} level=${stringify(cab?.level() ?? null)} sound=${stringify(detail(mediaToPlay()))} known=${stringify([...KNOWN].map(detail))}`,
+    })
+  }
   const tellCab = () => {
     const isPlaying = playing()
-    const found = playingNow() ?? findPlayback()
+    const found = mediaToPlay() ?? findPlayback()
     const levels = cab?.level()
     const heard = Array.isArray(levels) && levels.slice(0, 2).some((ear) => ear > 0.0005)
     quietSince = isPlaying && levels && !heard ? (quietSince ?? Date.now()) : null
+    if (quietSince && Date.now() - quietSince > 4000) {
+      debug('silent')
+      if (KNOWN.size > 1 && Date.now() - quietSince > 8000) {
+        chosen += 1
+        debug('next')
+      }
+    }
     const now =
       quietSince && Date.now() - quietSince > 4000
         ? `silent while playing (${KNOWN.size} elements, taken one ${found?.muted ? 'muted' : found?.paused ? 'paused' : 'playing'})`

@@ -663,6 +663,7 @@ impl Netease {
                     }
                 }
                 Some(Message::Speakers(said)) => log!("[netease] speakers: {said}"),
+                Some(Message::Debug(said)) => log!("[netease] debug: {said}"),
                 Some(Message::State(state)) => reports.push(Report::State(state)),
                 Some(Message::Answer(answer)) => {
                     self.unanswered.borrow_mut().answered(answer.answer);
@@ -704,6 +705,8 @@ enum Message {
     /// What the truck's speakers made of its sound, for the log: through them, no element found, or silent
     /// while NetEase plays.
     Speakers(String),
+    /// The page's own debug line (which element is taken, and what it is doing), for the log.
+    Debug(String),
     State(State),
     Answer(Box<Answer>),
     Playback(Option<Box<Playback>>),
@@ -716,6 +719,9 @@ fn read_message(message: &str) -> Option<Message> {
     }
     if value.get("ready").and_then(serde_json::Value::as_bool) == Some(true) {
         return Some(Message::Ready);
+    }
+    if let Some(said) = value.get("debug").and_then(serde_json::Value::as_str) {
+        return Some(Message::Debug(said.chars().take(900).collect()));
     }
     if let Some(said) = value.get("speakers").and_then(serde_json::Value::as_str) {
         // Only the page's own two sayings, and short: nothing else of the page reaches the log.

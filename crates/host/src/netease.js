@@ -120,8 +120,11 @@
     if (!element.muted) sounding = element
     KNOWN.add(element)
   }
+  // An element with nothing loaded is no playback (the page's player calls play() before its song's address
+  // comes, or when it never does: the app mustn't run its time on for that).
+  const usable = (element) => !element.paused && !element.ended && (element.readyState > 0 || element.currentTime > 0)
   const playingNow = () =>
-    [...KNOWN].find((element) => !element.paused && !element.ended && !element.muted) ?? null
+    [...KNOWN].find((element) => !element.paused && !element.ended && !element.muted && usable(element)) ?? null
   const MEDIA_EVENTS = ['loadedmetadata', 'canplay', 'playing', 'pause', 'waiting', 'stalled']
   const watched = new WeakSet()
   const watch = (win) => {
@@ -172,11 +175,20 @@
   // What the truck's speakers should play: an element of this document (a page's own graph across documents may
   // play its silence), the playing ones in turn; no such element, nothing is taken (the page's own sound stays).
   let chosen = 0
+  let unmuted = ''
   const mediaToPlay = () => {
-    const here = [...KNOWN].filter(
-      (element) => element.ownerDocument === document && !element.paused && !element.ended && !element.muted,
-    )
-    return here.length > 0 ? here[chosen % here.length] : null
+    const here = [...KNOWN].filter((element) => element.ownerDocument === document && usable(element))
+    const sounding = here.filter((element) => !element.muted)
+    if (sounding.length > 0) return sounding[chosen % sounding.length]
+    const muted = here.filter((element) => element.muted)
+    if (muted.length === 0) return null
+    // The page's own autoplay fallback leaves its music muted, waiting for a tap a scripted player never gets.
+    // Unmuted here, it's heard through the truck's speakers as any page's sound (a player's PC, 2026-10-26:
+    // nothing but a muted video playing, an empty audio element beside it).
+    const element = muted[chosen % muted.length]
+    unmuted = `${element.tagName.toLowerCase()} ${Math.round(element.currentTime)}s`
+    element.muted = false
+    return element
   }
   const seconds = (value) => {
     const number = Number(value)
@@ -609,13 +621,17 @@
     ready: element?.readyState ?? null,
     at: Math.round(element?.currentTime ?? 0),
     length: Math.round(element?.duration ?? 0),
-    src: String(element?.currentSrc ?? element?.src ?? '').replace(/^https?:\/\//, '').slice(0, 70),
+    source: element?.srcObject?.constructor?.name ?? null,
+    parent: element?.parentElement
+      ? `${element.parentElement.tagName.toLowerCase()}#${element.parentElement.id}.${String(element.parentElement.className).split(' ')[0]}`
+      : null,
+    src: String(element?.currentSrc || element?.src || '').replace(/^https?:\/\//, '').slice(0, 70),
   })
   const debug = (why) => {
     if (Date.now() - debugAt < 4000) return
     debugAt = Date.now()
     post({
-      debug: `${why} chosen=${chosen} ctx=${cab?.state?.() ?? '?'} level=${stringify(cab?.level() ?? null)} sound=${stringify(detail(mediaToPlay()))} known=${stringify([...KNOWN].map(detail))}`,
+      debug: `${why} unmuted=${unmuted || '-'} bar=${pageIsPlaying()} ${stringify(barTimes() ?? null)} hash=${location.hash} track=${track()?.id ?? '?'} ctx=${cab?.state?.() ?? '?'} level=${stringify(cab?.level() ?? null)} sound=${stringify(detail(mediaToPlay()))} known=${stringify([...KNOWN].map(detail))}`,
     })
   }
   const tellCab = () => {

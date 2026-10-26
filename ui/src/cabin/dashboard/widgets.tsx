@@ -16,6 +16,12 @@ import {
   useYouTubeMusic,
   useYouTubeMusicSource,
 } from '../apps/youtubeMusic/youtubeMusic'
+import {
+  playOrPause as playOrPauseNetease,
+  skip as skipNetease,
+  useNetease,
+  useNeteaseSource,
+} from '../apps/netease/netease'
 import type { MediaAction, MediaSource } from '../../shared/media'
 import { go, useCabin } from '../state/store'
 import { useMapData } from '../maps/mapData'
@@ -30,18 +36,20 @@ import { cabClock } from '../../shared/host'
 
 /**
  * Now Playing: what plays, the video YouTube plays first (VideoWidget), then the Spotify app's music, then
- * Apple Music's (the Music app), then YouTube Music's; nothing playing, what played last (nowPlaying.ts); none
- * of them with anything, Not Playing. Turned off in Settings, its room goes to the others.
+ * Apple Music's (the Music app), then YouTube Music's, then NetEase Cloud Music's; nothing playing, what played
+ * last (nowPlaying.ts); none of them with anything, Not Playing. Turned off in Settings, its room goes to the
+ * others.
  */
 export function NowPlayingWidget() {
   const shown = useCabin((state) => state.dashboardWidgets.nowPlaying)
-  const { showing, spotify, appleMusic, youtubeMusic } = useNowPlaying()
+  const { showing, spotify, appleMusic, youtubeMusic, netease } = useNowPlaying()
   return (
     <div className={`widget-slot${shown ? ' open' : ''}`}>
       {shown && showing === 'video' && <VideoWidget />}
       {shown && showing === 'spotify' && spotify && <SpotifyWidget spotify={spotify} />}
       {shown && showing === 'appleMusic' && appleMusic && <AppleMusicWidget appleMusic={appleMusic} />}
       {shown && showing === 'youtubeMusic' && youtubeMusic && <YouTubeMusicWidget youtubeMusic={youtubeMusic} />}
+      {shown && showing === 'netease' && netease && <NeteaseWidget netease={netease} />}
       {shown && showing === null && <MusicWidget source={null} artwork={null} onControl={() => {}} />}
     </div>
   )
@@ -80,6 +88,25 @@ function YouTubeMusicWidget({ youtubeMusic }: { youtubeMusic: NonNullable<Return
         if (action === 'playPause') playOrPauseYouTubeMusic()
         else if (action === 'next') skipYouTubeMusic(1)
         else if (action === 'previous') skipYouTubeMusic(-1)
+      }}
+    />
+  )
+}
+
+/** NetEase Cloud Music's music: what plays, its controls, opening NetEase Cloud Music on Now Playing. */
+function NeteaseWidget({ netease }: { netease: NonNullable<ReturnType<typeof useNeteaseSource>> }) {
+  return (
+    <MusicWidget
+      source={netease.source}
+      artwork={netease.artwork}
+      onOpen={() => {
+        useNetease.setState({ nowPlaying: true })
+        go({ type: 'openApp', app: 'netease' })
+      }}
+      onControl={(action) => {
+        if (action === 'playPause') playOrPauseNetease()
+        else if (action === 'next') skipNetease(1)
+        else if (action === 'previous') skipNetease(-1)
       }}
     />
   )

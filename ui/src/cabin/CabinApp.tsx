@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { isInHost, postToHost } from '../shared/host'
 import { appleMusicPlayer, pauseAppleMusicWithGame } from './apps/music/pauseWithGame'
 import { keybinds } from './apps/keybinds'
+import { pauseNeteaseWithGame, neteasePlayer } from './apps/netease/pauseWithGame'
 import { oneAtATime } from './apps/oneAtATime'
 import { pauseSpotifyWithGame, spotifyPlayer } from './apps/spotify/pauseWithGame'
 import { pauseYouTubeWithGame, youtubePlayer } from './apps/youtube/pauseWithGame'
@@ -33,13 +34,15 @@ export function CabinApp() {
   const route = useCabin((state) => state.navigation.route)
   const phase = useCabin((state) => state.power.phase)
   useEffect(() => connectHost(), [])
-  // YouTube, Spotify, Apple Music and YouTube Music pause with the game (its menu, tabbing out) and play on after.
+  // YouTube, Spotify, Apple Music, YouTube Music and NetEase Cloud Music pause with the game (its menu, tabbing
+  // out) and play on after.
   useEffect(() => pauseYouTubeWithGame(), [])
   useEffect(() => pauseSpotifyWithGame(), [])
   useEffect(() => pauseAppleMusicWithGame(), [])
   useEffect(() => pauseYouTubeMusicWithGame(), [])
+  useEffect(() => pauseNeteaseWithGame(), [])
   // One of them at a time: the newest to start plays on, the others pause (apps/oneAtATime.ts).
-  useEffect(() => oneAtATime([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer]), [])
+  useEffect(() => oneAtATime([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer, neteasePlayer]), [])
   // The player's keybinds pressed in the game: the music's volume, or play/pause (apps/keybinds.ts).
   useEffect(() => followKeybinds(), [])
   // The clock where the truck is: its country's time zone, as the game's own clock (state/timeZone.ts).
@@ -81,7 +84,7 @@ export function CabinApp() {
 /** Acts on each keybind pressed in the game, for the cab's players, showing a volume it sets. Returns the
  * function that stops it. */
 function followKeybinds(): () => void {
-  const binds = keybinds([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer])
+  const binds = keybinds([youtubePlayer, spotifyPlayer, appleMusicPlayer, youtubeMusicPlayer, neteasePlayer])
   const stop = useLive.subscribe((live, before) => {
     if (!live.keybind || live.keybind.count === before.keybind?.count) return
     const shown = binds.press(live.keybind.action)

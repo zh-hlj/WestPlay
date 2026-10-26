@@ -418,6 +418,48 @@ export interface Strings {
     addedToQueue: string
     volume: string
   }
+  /** NetEase Cloud Music: WestPlay's own app, in the look of NetEase Cloud Music's app. */
+  netease: {
+    tabs: { home: string; search: string; mine: string }
+    searchHint: string
+    cancel: string
+    search: string
+    searches: string
+    remove: string
+    noResults: string
+    play: string
+    pause: string
+    next: string
+    previous: string
+    shuffle: string
+    repeat: string
+    volume: string
+    lyrics: string
+    /** Now Playing's sheet, and what fills it. */
+    nowPlaying: string
+    playingFrom: string
+    upNext: string
+    /** A card's or a page's line: what it is. */
+    kinds: { song: string; playlist: string; album: string; artist: string; radio: string }
+    /** "12 songs" */
+    songs: (count: number) => string
+    signIn: string
+    signOut: string
+    account: string
+    /** While NetEase's sign-in window is open on the PC. */
+    finishOnPc: string
+    /** Mine, signed out. */
+    signInPitch: { title: string; text: string }
+    /** Mine, signed in: what the app shows of the account. */
+    mineNote: string
+    empty: string
+    noLyrics: string
+    cantPlay: string
+    failed: string
+    tryAgain: string
+    back: string
+    close: string
+  }
   /** The Weather app: where the truck is, the game's next change of weather and the roads. */
   weatherApp: {
     myLocation: string
@@ -900,6 +942,44 @@ export const STRINGS: Record<Language, Strings> = {
       addedToQueue: 'Song added to queue',
       volume: 'Volume',
     },
+    netease: {
+      tabs: { home: 'Home', search: 'Search', mine: 'Mine' },
+      searchHint: 'Search songs, artists, playlists',
+      cancel: 'Cancel',
+      search: 'Search',
+      searches: 'Recent searches',
+      remove: 'Remove',
+      noResults: 'No results',
+      play: 'Play',
+      pause: 'Pause',
+      next: 'Next',
+      previous: 'Previous',
+      shuffle: 'Shuffle',
+      repeat: 'Repeat',
+      volume: 'Volume',
+      lyrics: 'Lyrics',
+      nowPlaying: 'Now playing',
+      playingFrom: 'Playing from',
+      upNext: 'Up next',
+      kinds: { song: 'Songs', playlist: 'Playlists', album: 'Albums', artist: 'Artists', radio: 'Radio' },
+      songs: (count) => (count === 1 ? '1 song' : `${count} songs`),
+      signIn: 'Sign in',
+      signOut: 'Sign out',
+      account: 'Account',
+      finishOnPc: 'Finish signing in on your PC.',
+      signInPitch: {
+        title: 'Your music, everywhere',
+        text: 'Sign in to NetEase Cloud Music to see your playlists and your liked songs. Its own QR code signs you in, scanned with the app on your phone.',
+      },
+      mineNote: 'Your playlists and liked songs are NetEase’s own; WestPlay shows what it can of them.',
+      empty: 'Nothing here yet.',
+      noLyrics: 'Lyrics aren’t available for this song.',
+      cantPlay: 'NetEase Cloud Music can’t play this right now.',
+      failed: 'Couldn’t load this.',
+      tryAgain: 'Try again',
+      back: 'Back',
+      close: 'Close',
+    },
     weatherApp: {
       myLocation: 'My Location',
       nextChange: 'Next change',
@@ -941,6 +1021,7 @@ export const STRINGS: Record<Language, Strings> = {
       spotify: 'Spotify',
       youtube: 'YouTube',
       youtubeMusic: 'YouTube Music',
+      netease: 'NetEase Cloud Music',
       podcasts: 'Podcasts',
       phone: 'Phone',
       messages: 'Messages',
@@ -1385,6 +1466,45 @@ export const STRINGS: Record<Language, Strings> = {
       addedToQueue: 'Şarkı sıraya eklendi',
       volume: 'Ses',
     },
+    netease: {
+      tabs: { home: 'Ana Sayfa', search: 'Ara', mine: 'Benim' },
+      searchHint: 'Şarkı, sanatçı, çalma listesi ara',
+      cancel: 'İptal',
+      search: 'Ara',
+      searches: 'Son aramalar',
+      remove: 'Kaldır',
+      noResults: 'Sonuç yok',
+      play: 'Oynat',
+      pause: 'Duraklat',
+      next: 'Sonraki',
+      previous: 'Önceki',
+      shuffle: 'Karıştır',
+      repeat: 'Tekrarla',
+      volume: 'Ses',
+      lyrics: 'Şarkı sözleri',
+      nowPlaying: 'Şimdi çalıyor',
+      playingFrom: 'Şuradan çalınıyor',
+      upNext: 'Sıradaki',
+      kinds: { song: 'Şarkılar', playlist: 'Çalma listeleri', album: 'Albümler', artist: 'Sanatçılar', radio: 'Radyo' },
+      songs: (count) => `${count} şarkı`,
+      signIn: 'Oturum aç',
+      signOut: 'Oturumu kapat',
+      account: 'Hesap',
+      finishOnPc: 'Oturum açmayı bilgisayarınızda tamamlayın.',
+      signInPitch: {
+        title: 'Müziğiniz her yerde',
+        text: 'Çalma listelerinizi ve beğendiğiniz şarkıları görmek için NetEase Cloud Music’te oturum açın. Kendi QR kodu, telefonunuzdaki uygulamayla okutularak sizi oturuma sokar.',
+      },
+      mineNote:
+        'Çalma listeleriniz ve beğendiğiniz şarkılar NetEase’in kendi listeleridir; WestPlay onlardan gösterebildiğini gösterir.',
+      empty: 'Burada henüz bir şey yok.',
+      noLyrics: 'Bu şarkının sözleri yok.',
+      cantPlay: 'NetEase Cloud Music bunu şu anda çalamıyor.',
+      failed: 'Yüklenemedi.',
+      tryAgain: 'Tekrar dene',
+      back: 'Geri',
+      close: 'Kapat',
+    },
     weatherApp: {
       myLocation: 'Konumum',
       nextChange: 'Sonraki değişim',
@@ -1426,6 +1546,7 @@ export const STRINGS: Record<Language, Strings> = {
       spotify: 'Spotify',
       youtube: 'YouTube',
       youtubeMusic: 'YouTube Music',
+      netease: 'NetEase Cloud Music',
       podcasts: 'Podcast’ler',
       phone: 'Telefon',
       messages: 'Mesajlar',
@@ -1870,6 +1991,44 @@ export const STRINGS: Record<Language, Strings> = {
       addedToQueue: '已添加到播放队列',
       volume: '音量',
     },
+    netease: {
+      tabs: { home: '首页', search: '搜索', mine: '我的' },
+      searchHint: '搜索歌曲、歌手、歌单',
+      cancel: '取消',
+      search: '搜索',
+      searches: '搜索历史',
+      remove: '删除',
+      noResults: '没有结果',
+      play: '播放',
+      pause: '暂停',
+      next: '下一首',
+      previous: '上一首',
+      shuffle: '随机播放',
+      repeat: '循环播放',
+      volume: '音量',
+      lyrics: '歌词',
+      nowPlaying: '正在播放',
+      playingFrom: '播放来源',
+      upNext: '接下来播放',
+      kinds: { song: '单曲', playlist: '歌单', album: '专辑', artist: '歌手', radio: '电台' },
+      songs: (count) => `${count} 首歌曲`,
+      signIn: '登录',
+      signOut: '退出登录',
+      account: '账户',
+      finishOnPc: '请在电脑上完成登录。',
+      signInPitch: {
+        title: '让音乐一直陪着你',
+        text: '登录网易云音乐，即可查看你的歌单和喜欢的音乐。用网易云音乐自己的二维码，在手机上扫码登录。',
+      },
+      mineNote: '你的歌单和喜欢的音乐都在网易云音乐里，WestPlay 只显示其中能看到的部分。',
+      empty: '这里还没有内容。',
+      noLyrics: '此歌曲暂无歌词。',
+      cantPlay: '网易云音乐暂时无法播放此内容。',
+      failed: '加载失败。',
+      tryAgain: '重试',
+      back: '返回',
+      close: '关闭',
+    },
     weatherApp: {
       myLocation: '我的位置',
       nextChange: '下次天气变化',
@@ -1911,6 +2070,7 @@ export const STRINGS: Record<Language, Strings> = {
       spotify: 'Spotify',
       youtube: 'YouTube',
       youtubeMusic: 'YouTube Music',
+      netease: '网易云音乐',
       podcasts: '播客',
       phone: '电话',
       messages: '信息',

@@ -63,7 +63,8 @@ screen, used with the mouse while you hold a key.
       <img alt="YouTube Music's Now Playing" src="docs/images/youtube-music.png" width="100%">
       <h3>Your music</h3>
       Apple Music, Spotify and YouTube Music, with Now Playing and lyrics. A song's music video plays right in
-      Now Playing, and YouTube has its channels, playlists, captions and quality.
+      Now Playing, and YouTube has its channels, playlists, captions and quality. This fork adds NetEase Cloud
+      Music as an experimental app: see <a href="docs/netease/README.md">docs/netease/README.md</a>.
     </td>
     <td width="50%" valign="top">
       <picture>
@@ -123,8 +124,8 @@ where it's missing).
 
 WestPlay has no servers, no accounts of its own and no analytics. It doesn't collect or send anything about you.
 
-- You sign in to Apple Music, Spotify and YouTube on their own pages, in WestPlay's own browser profile on your PC,
-  as you would in a browser. WestPlay keeps no account data of its own.
+- You sign in to Apple Music, Spotify, YouTube and NetEase Cloud Music on their own pages, in WestPlay's own browser
+  profile on your PC, as you would in a browser. WestPlay keeps no account data of its own.
 - Your map is built from your game on your PC and stays there.
 - WestPlay talks to the services you use, to GitHub to look for updates, and to Kreosus only if you open
   "Support me".
@@ -161,7 +162,7 @@ License, version 3 or (at your option) any later version. See [LICENSE](LICENSE)
 The libraries WestPlay ships keep their own licences: see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md), and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the work it follows.
 
-<sub>WestPlay is an independent project, not affiliated with or endorsed by Apple, SCS Software, Spotify, Google or
-the truck makers. CarPlay, Apple Music, Spotify, YouTube, YouTube Music and the truck makers' names and logos are
-trademarks of their owners, used to name what WestPlay works with. The screenshots show WestPlay's preview with
-made-up songs.</sub>
+<sub>WestPlay is an independent project, not affiliated with or endorsed by Apple, SCS Software, Spotify, Google,
+NetEase or the truck makers. CarPlay, Apple Music, Spotify, YouTube, YouTube Music, NetEase Cloud Music and the
+truck makers' names and logos are trademarks of their owners, used to name what WestPlay works with. The
+screenshots show WestPlay's preview with made-up songs.</sub>

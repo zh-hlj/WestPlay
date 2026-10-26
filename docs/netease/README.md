@@ -1,7 +1,8 @@
 # 网易云音乐接入（host 侧）：方案、决策与交付
 
-> 状态：**设计 + host 侧代码 + 接线已落地**（`lib.rs` 等现有文件已由 Lead 按 [`rust-wiring.md`](rust-wiring.md) 接线；
-> **未编译验证**：本机无 Rust 工具链、无 MSVC，必须先在 Windows 开发机上 `cargo check`/`cargo test`）。
+> 状态：**已接线并编译通过**（Lead 按 [`rust-wiring.md`](rust-wiring.md) 接线；用 Rust 1.99.1
+> `x86_64-pc-windows-gnu` + MinGW-w64 16.2 在本机 `cargo build --release` 成功、程序启动冒烟通过；
+> MSVC 构建与真机行为仍未验证）。
 > 目标版本：WestPlay v2.0.3（分支 `feat/netease-zh`，GPL-3.0-or-later）。
 > 本任务写入范围：`crates/host/src/netease.rs`、`netease.js`、`netease_sign_in.js`、`docs/netease/`；接线改动见
 > `crates/host/src/{lib,signin,performance,customize}.rs`、`app/src/main.rs`、`ui/src/hostScripts.test.ts`。
@@ -359,7 +360,7 @@ cabin 消息（与现有 App 一致）：
 | 里程碑                        | 内容                                                                                                                                                                                  | 估算               | 依赖/风险                                                        |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------- |
 | **M0 本任务**                 | host 骨架 + 注入脚本 + 登录脚本 + 三份文档                                                                                                                                            | 0.5–1 人日         | 无（本环境无 Rust 工具链，未编译）                               |
-| **M1 接线（已落地，待编译）** | Lead 已按 `rust-wiring.md` 改 `lib.rs`/`signin.rs`/`performance.rs`/`customize.rs`/`app/src/main.rs`/`hostScripts.test.ts`；**尚未** `cargo check`/`cargo test`（本机无 Rust 工具链） | 0.5 人日（待验证） | 行号漂移；`Profile` 新枚举必须补 match 臂                        |
+| **M1 接线（已完成）**         | Lead 已按 `rust-wiring.md` 改 `lib.rs`/`signin.rs`/`performance.rs`/`customize.rs`/`app/src/main.rs`/`hostScripts.test.ts`；**已用 Rust 1.99.1 GNU + MinGW-w64 16.2 `cargo build --release` 编译成功**（MSVC 未验证） | 0.5 人日           | 行号漂移；`Profile` 新枚举必须补 match 臂                        |
 | **M2 旧版真机可用**           | WebView2 加载旧版、登录扫码、播放/暂停/切歌/音量/进度、状态上报、cab 出声                                                                                                             | 1–2 人日           | **选择器未验证**（`.pas`、`.words`、按钮）；`#g_iframe` 同源访问 |
 | **M3 浏览/搜索/歌词**         | home/search/collection/lyrics 接口形状核对、错误兜底、封面 https、200 首截断、性能                                                                                                    | 1–2 人日           | `/api` 参数与字段随页面变化                                      |
 | **M4 新版 PWA 适配**          | 抓 DOM/网络、决定复用或单独脚本、入口域名判定                                                                                                                                         | 2–4 人日           | **最不确定**；可能只能做播放统计+媒体元素控制                    |
@@ -417,8 +418,9 @@ cabin 消息（与现有 App 一致）：
 
 ## 13. 待办清单（按优先级）
 
-1. **编译并在开发机验证**（M1；接线已由 Lead 落地）：`cargo check -p westplay-host`、`cargo test -p westplay-host`、
-   `cd ui; npm test -- hostScripts`，修掉只有编译才能发现的类型/借用问题（命令见 `rust-wiring.md` §8）。
+1. **编译验证已完成（GNU）**：本机用 Rust 1.99.1 `x86_64-pc-windows-gnu` + MinGW-w64 16.2 的
+   `cargo build --release` 成功、程序启动冒烟通过；仍需在 MSVC 环境 `cargo check`/`cargo test` 并打包正式安装器
+   （命令见 `rust-wiring.md` §8）。
 2. **真机验证选择器**（M2）：`#g_player`、`.pas`、`.words`、`.head img`、`.time`、`.prv/.nxt`、`.u-btni-play`、
    `#g_iframe.contentDocument`；把 `TODO(verify)` 逐个转成确认的常量。
 3. **`/api` 形状核对**（M3）：`search/get` 的 `type` 数字与返回、`personalized/*`、`v6/playlist/detail`、

@@ -1,11 +1,11 @@
 # 网易云音乐接入（host 侧）：方案、决策与交付
 
-> 状态：**已接线并编译通过**（Lead 按 [`rust-wiring.md`](rust-wiring.md) 接线；用 Rust 1.99.1
-> `x86_64-pc-windows-gnu` + MinGW-w64 16.2 在本机 `cargo build --release` 成功、程序启动冒烟通过；
-> MSVC 构建与真机行为仍未验证）。
-> 目标版本：WestPlay v2.0.3（分支 `feat/netease-zh`，GPL-3.0-or-later）。
-> 本任务写入范围：`crates/host/src/netease.rs`、`netease.js`、`netease_sign_in.js`、`docs/netease/`；接线改动见
-> `crates/host/src/{lib,signin,performance,customize}.rs`、`app/src/main.rs`、`ui/src/hostScripts.test.ts`。
+> 状态：**已合入官方 v2.1.0，并由 GitHub Actions（MSVC）构建、发布预览版**。Rust host 本地 `cargo check`
+> 与 CI `cargo build` 均通过；UI `tsc` 0 错误、`vitest` 63 个文件 / 441 个测试全过。安装器跳过 Tauri 自带的
+> WebView2 检测、并替换了上游会误报的 PREINSTALL hook；同时关闭了指向原作者更新源的更新提示（避免把本修改版
+> 更新成官方版）。真机行为（游戏内插件、网易云登录/播放）仍需逐项验证。
+> 目标版本：WestPlay v2.1.0（分支 `feat/netease-zh`，GPL-3.0-or-later）。
+> 接线改动：`crates/host/src/{lib,signin,performance,customize}.rs`、`app/src/main.rs`、`ui/src/hostScripts.test.ts`。
 > 真机验证见 [`verification.md`](verification.md)。
 
 ## 0. 结论（TL;DR）

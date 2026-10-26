@@ -79,6 +79,18 @@ jobs:
           if (-not $base.plugins) { $base.plugins = @{} }
           if (-not $base.plugins.updater) { $base.plugins.updater = @{} }
           $base.plugins.updater.endpoints = @()
+          # Upstream's PREINSTALL hook probes WebView2 itself and false-negatives on some PCs that do have
+          # the runtime (this one: 155.x present, MSI/registry fine). Replace it with an empty hook: with
+          # webviewInstallMode skip above, the installer installs over the existing build without asking.
+          New-Item -ItemType Directory -Force -Path src-tauri/installer | Out-Null
+          @(
+            '; WestPlay (Chinese/NetEase fork): no PREINSTALL checks.',
+            '; webviewInstallMode is "skip" and the upstream WebView2 probe is replaced by this empty hook,',
+            '; so the installer can install over an existing WestPlay even where that probe false-negatives.',
+            '!macro NSIS_HOOK_PREINSTALL',
+            '!macroend'
+          ) -join "`n" | Set-Content src-tauri/installer/ci-hooks.nsh -Encoding utf8
+          $base.bundle.windows.nsis.installerHooks = "installer/ci-hooks.nsh"
           $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
 
       - name: Build app and NSIS installer
@@ -95,16 +107,28 @@ jobs:
           Copy-Item LICENSE out/portable/LICENSE.txt
           Copy-Item THIRD_PARTY_LICENSES.md, THIRD_PARTY_NOTICES.md out/portable/
           @"
-          WestPlay v2.0.3 中文 + 实验性网易云音乐（GitHub Actions / MSVC 构建）
+          WestPlay v2.1.0 中文 + 实验性网易云音乐（GitHub Actions / MSVC 构建）
           =====================================================================
+          覆盖安装：先退出正在运行的 WestPlay，然后运行新的 setup.exe，安装目录选原来那个
+          （例如 C:\gameDATE\WestPlay）即可直接覆盖；或把本 zip 解压覆盖到原安装目录。
           双击 westplay.exe 运行。若提示 WebView2 0x800700AA（请求的资源在使用中），
-          请先从系统托盘完全退出官方 WestPlay、结束残留的 msedgewebview2.exe，或重启电脑后再试。
-          若想同时运行官方版，可设置环境变量 WEBVIEW2_USER_DATA_FOLDER 指向独立目录后再启动。
+          请先从系统托盘完全退出官方 WestPlay、结束残留的 msedgewebview2.exe，或重启电脑后再试；
+          也可双击「启动(避让占用).bat」，它会为 WebView2 使用包内独立数据目录。
+          本版本已关闭上游更新源，不会再提示安装原作者的官方更新。
           构建时间：$(Get-Date -Format o)  提交：${{ github.sha }}
           游戏内安装（ETS2 插件 westplay.dll）与网易云登录/播放需真机验证。
           源码：${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}  许可：GPL-3.0-or-later
           "@ | Set-Content out/portable/README-使用说明.txt -Encoding UTF8
-          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.0.3-netease-zh-portable-msvc.zip -Force
+          @"
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "%~dp0webview2-data" mkdir "%~dp0webview2-data"
+          set WEBVIEW2_USER_DATA_FOLDER=%~dp0webview2-data
+          start "" "%~dp0westplay.exe"
+          endlocal
+          "@ | Set-Content out/portable/启动(避让占用).bat -Encoding utf8
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.0-netease-zh-portable-msvc.zip -Force
 
       - name: Collect build outputs
         shell: pwsh
@@ -121,15 +145,15 @@ jobs:
           name: westplay-windows-msvc
           path: |
             out/installer/*.exe
-            out/WestPlay-2.0.3-netease-zh-portable-msvc.zip
+            out/WestPlay-2.1.0-netease-zh-portable-msvc.zip
           if-no-files-found: error
 
       - name: Attach to the preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.3-netease-zh-preview1
+          tag_name: v2.1.0-zh-netease-preview1
           prerelease: true
           fail_on_unmatched_files: false
           files: |
             out/installer/*.exe
-            out/WestPlay-2.0.3-netease-zh-portable-msvc.zip
+            out/WestPlay-2.1.0-netease-zh-portable-msvc.zip

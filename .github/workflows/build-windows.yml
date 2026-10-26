@@ -69,6 +69,16 @@ jobs:
           $base.bundle.targets = @("nsis")
           # No updater signing key on CI: skip updater artifacts (the installer itself is still made).
           $base.bundle.createUpdaterArtifacts = $false
+          # Tauri's NSIS WebView2 check reports false negatives on machines that do have the runtime
+          # (this one: WebView2 155.x present, registry under WOW6432Node). Skip the check instead of
+          # refusing to install; the app still uses the installed runtime.
+          if (-not $base.bundle.windows) { $base.bundle.windows = @{} }
+          $base.bundle.windows.webviewInstallMode = @{ type = "skip" }
+          # This fork must not take the upstream author's updates: installing 2.x would replace the
+          # Chinese/NetEase build. No endpoints: the updater finds nothing and stays silent.
+          if (-not $base.plugins) { $base.plugins = @{} }
+          if (-not $base.plugins.updater) { $base.plugins.updater = @{} }
+          $base.plugins.updater.endpoints = @()
           $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
 
       - name: Build app and NSIS installer

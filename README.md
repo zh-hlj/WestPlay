@@ -3,6 +3,11 @@
 <h1 align="center">WestPlay</h1>
 
 <p align="center">
+  <a href="README.zh-CN.md">简体中文说明</a> ·
+  <a href="https://github.com/zh-hlj/WestPlay/releases">中文分支 Releases</a>
+</p>
+
+<p align="center">
   <b>A CarPlay-style screen for the trucks of Euro Truck Simulator 2.</b><br>
   Your map, your music and YouTube, on your truck's own dashboard screen.
 </p>

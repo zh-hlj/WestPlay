@@ -18,7 +18,7 @@
 | 系统             | Windows 10/11 x64                                                                            |
 | WebView2 Runtime | 已安装（Edge 自带亦可）；`Status.webviewVersion` 可见                                        |
 | 构建工具         | Rust 工具链 + MSVC + Node 22+；本仓库 `cargo build` 可跑                                     |
-| 游戏             | Euro Truck Simulator 2（1.58+）+ WestPlay plugin（v2.0.3 对应）                              |
+| 游戏             | Euro Truck Simulator 2（1.58+）+ WestPlay plugin（v2.1.0 对应）                              |
 | 账号             | **非会员测试号** 与 **会员测试号** 各一（VIP 项用）；手机装网易云 App（扫码）                |
 | 网络             | 国内出口（正常项）；海外出口（VPN/代理）仅用于 §I 的海外灰歌验证，验证完断开                 |
 | 日志             | `%USERPROFILE%\Documents\WestPlay\logs\app.log`（每次启动重写；见 `crates/host/src/log.rs`） |

@@ -404,9 +404,15 @@
   }
   const songDetail = async (ids) => {
     if (ids.length === 0) return []
-    // TODO(verify): `/api/song/detail` with the ids as one `[1,2,3]` argument.
-    const answer = await get(`/api/song/detail?ids=${encodeURIComponent(`[${ids.join(',')}]`)}`)
-    return tracks(answer?.songs)
+    // TODO(verify): `/api/song/detail` with the ids as one `[1,2,3]` argument; a long list is asked in batches
+    // (the address has its length).
+    const songs = []
+    for (let at = 0; at < ids.length; at += 100) {
+      const batch = ids.slice(at, at + 100)
+      const answer = await get(`/api/song/detail?ids=${encodeURIComponent(`[${batch.join(',')}]`)}`)
+      songs.push(...tracks(answer?.songs))
+    }
+    return songs
   }
 
   // TODO(verify): the page's own type numbers for a search (`/api/search/get`): songs 1, albums 10, artists
@@ -475,8 +481,8 @@
       const ids = (found.trackIds ?? [])
         .map((entry) => String(entry?.id ?? ''))
         .filter((each) => NUMBER.test(each))
-        // A playlist may be thousands of songs long: the app shows a page's worth at a time.
-        .slice(0, 200)
+        // A playlist may be thousands of songs long: the app shows a few pages' worth.
+        .slice(0, 500)
       return { item: playlistOf(found), tracks: await songDetail(ids) }
     }
     const album = await get(`/api/album/${id}`).catch(() => null)
@@ -679,7 +685,7 @@
   }
   const directPlaylist = async (playlist) => {
     const found = await collection({ id: playlist }).catch(() => null)
-    if (!found?.tracks?.length) return playOnPage(undefined, playlist)
+    if (!found?.tracks?.length) return false
     return directPlayFrom(found.tracks, 0, playlist)
   }
   // Its end: the next one (or the same, repeating one; or round the list).
@@ -711,7 +717,8 @@
 
   const CONTROLS = {
     play: ({ song, playlist }) => {
-      if (song) return directSong(song, playlist).then((played) => played || playOnPage(song, playlist))
+      // Only our own player: the page's has played nothing on a player's PC while saying it did.
+      if (song) return directSong(song, playlist)
       if (playlist) return directPlaylist(playlist)
       return playing() ? undefined : directTrack ? directElement?.play() : toggle()
     },

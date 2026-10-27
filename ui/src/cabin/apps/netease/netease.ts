@@ -77,6 +77,8 @@ interface NeteaseState {
   signedIn: boolean | null
   playing: boolean | null
   signingIn: boolean
+  /** The account's membership as NetEase says it ("VIP", "黑胶VIP", "非VIP"; null: signed out or not known). */
+  vip: string | null
   tab: Tab
   /** Each tab's pages over its own, the one showing last (each tab is kept where it was left). */
   views: Record<Tab, View[]>
@@ -101,6 +103,7 @@ export const useNetease = create<NeteaseState>()(
       signedIn: isInHost() ? null : false,
       playing: null,
       signingIn: false,
+      vip: null,
       tab: 'home',
       views: NO_VIEWS,
       nowPlaying: false,
@@ -174,12 +177,19 @@ export function signOut(): void {
 }
 
 /** What the host says of NetEase Cloud Music's web player (`netease`). */
-export function receiveState(message: { signedIn: boolean | null; playing: boolean | null; signingIn: boolean }): void {
+export function receiveState(message: {
+  signedIn: boolean | null
+  playing: boolean | null
+  signingIn: boolean
+  vip?: string | null
+}): void {
   useNetease.setState({
     playing: message.playing,
     signingIn: message.signingIn,
     // Not running (`null`): the kept sign-in stays as it was.
     ...(message.signedIn === null ? {} : { signedIn: message.signedIn }),
+    ...(message.signedIn === null || message.vip === undefined ? {} : { vip: message.vip }),
+    ...(message.signedIn === false ? { vip: null } : {}),
   })
 }
 

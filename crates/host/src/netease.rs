@@ -380,6 +380,9 @@ impl Playback {
 pub struct State {
     pub signed_in: bool,
     pub playing: bool,
+    /// The account's membership as NetEase's own profile says it ("VIP", "黑胶VIP", "非VIP"; `None`: not known).
+    #[serde(default)]
+    pub vip: Option<String>,
 }
 
 /// NetEase's answer to the app's question `answer` (its id), under the question's name; `failed` when NetEase
@@ -778,6 +781,7 @@ pub fn state_message(state: Option<&State>, signing_in: bool) -> String {
         "type": "netease",
         "signedIn": state.map(|s| s.signed_in),
         "playing": state.map(|s| s.playing),
+        "vip": state.and_then(|s| s.vip.as_deref()),
         "signingIn": signing_in,
     })
     .to_string()
@@ -883,11 +887,11 @@ mod tests {
         // The page's state, in the shape `netease.js` posts it, and in the shape the other players post.
         assert_eq!(
             read_message(r#"{"state":{"signedIn":true,"playing":false}}"#),
-            Some(Message::State(State { signed_in: true, playing: false }))
+            Some(Message::State(State { signed_in: true, playing: false, vip: None }))
         );
         assert_eq!(
             read_message(r#"{"signedIn":false,"playing":true}"#),
-            Some(Message::State(State { signed_in: false, playing: true }))
+            Some(Message::State(State { signed_in: false, playing: true, vip: None }))
         );
         assert_eq!(read_message(r#"{"playback":null}"#), Some(Message::Playback(None)));
         assert_eq!(
@@ -978,12 +982,12 @@ mod tests {
     #[test]
     fn says_whether_its_signed_in_and_playing() {
         assert_eq!(
-            state_message(Some(&State { signed_in: true, playing: false }), false),
-            r#"{"playing":false,"signedIn":true,"signingIn":false,"type":"netease"}"#
+            state_message(Some(&State { signed_in: true, playing: false, vip: Some("VIP".into()) }), false),
+            r#"{"playing":false,"signedIn":true,"signingIn":false,"type":"netease","vip":"VIP"}"#
         );
         assert_eq!(
             state_message(None, true),
-            r#"{"playing":null,"signedIn":null,"signingIn":true,"type":"netease"}"#
+            r#"{"playing":null,"signedIn":null,"signingIn":true,"type":"netease","vip":null}"#
         );
     }
 }

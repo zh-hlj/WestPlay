@@ -222,7 +222,7 @@ export type HostMessage =
   | { type: 'youtubeMusicPlayback'; playback: YouTubeMusicPlayback | null }
   /** NetEase Cloud Music's web player: whether it's signed in and playing (`null`: not running), and whether its
    * sign-in window is open on the PC. Nothing else of the account. */
-  | { type: 'netease'; signedIn: boolean | null; playing: boolean | null; signingIn: boolean }
+  | { type: 'netease'; signedIn: boolean | null; playing: boolean | null; signingIn: boolean; vip?: string | null }
   /** NetEase Cloud Music's answer to the app's question `id` (`failed`: it didn't answer). */
   | ({ type: 'neteaseAnswer'; id: number; failed?: boolean } & Partial<NeteaseAnswers>)
   /** What NetEase Cloud Music plays; `null`: nothing. */

@@ -312,6 +312,10 @@
   // TODO(verify): the page's own account, signed by its cookies: `/api/nuser/account/get` says `{account: null}`
   // signed out and the account's profile signed in. Never anything of it but whether it's signed in.
   let signedIn = null
+  // The account's membership, as its own profile says it (vipType 0: none, 10/11: black vinyl): what NetEase
+  // lets it hear, and what the app says of it.
+  let vipType = 0
+  let vip = null
   const account = async () => {
     try {
       // TODO(verify): the request the page itself makes (`/api/nuser/account/get`), and its `credentials`.
@@ -319,6 +323,9 @@
       if (!response.ok) return
       const json = await response.json()
       signedIn = Boolean(json?.account)
+      const profile = json?.profile ?? null
+      vipType = Number(profile?.vipType ?? 0) || 0
+      vip = signedIn ? (vipType >= 10 ? '黑胶VIP' : vipType > 0 ? 'VIP' : '非VIP') : null
     } catch {
       // Not this turn: said next time.
     }
@@ -326,7 +333,7 @@
   let toldState = ''
   const tellState = (always = false) => {
     if (signedIn === null) return
-    const state = { signedIn, playing: playing() }
+    const state = { signedIn, playing: playing(), vip }
     const said = stringify(state)
     if (said === toldState && !always) return
     toldState = said
@@ -588,11 +595,24 @@
   let directAt = 0
   let directStepping = false
   const directContext = () => (directList ? { id: directList.playlist, name: '', kind: 'playlist' } : null)
+  // A song's address, as the page's player asks it: the best the account's membership allows (a VIP's lossless,
+  // anyone's 320k), from the old address API and, failing that, the newer one. Null: NetEase has none to give.
+  const directUrl = async (song) => {
+    const br = vipType > 0 ? 999000 : 320000
+    const old = await get(`/api/song/enhance/player/url?id=${song}&ids=[${song}]&br=${br}`).catch(() => null)
+    let url = old?.data?.[0]?.url
+    if (typeof url !== 'string' || !url) {
+      const level = vipType >= 10 ? 'lossless' : 'exhigh'
+      const newer = await get(`/api/song/enhance/player/url/v1?ids=[${song}]&level=${level}&encodeType=aac`).catch(() => null)
+      url = newer?.data?.[0]?.url
+    }
+    if (typeof url !== 'string' || !url) return null
+    const https = url.replace(/^http:/, 'https:')
+    return https.startsWith('https://') ? https : null
+  }
   const directSong = async (song, playlist) => {
-    const answer = await get(`/api/song/enhance/player/url?id=${song}&ids=[${song}]&br=320000`).catch(() => null)
-    const found = answer?.data?.[0]
-    const url = typeof found?.url === 'string' ? found.url.replace(/^http:/, 'https:') : null
-    if (!url?.startsWith('https://')) return false
+    const url = await directUrl(song)
+    if (!url) return false
     const detail = await get(`/api/song/detail?ids=[${song}]`).catch(() => null)
     const item = detail?.songs?.[0]
     if (!item) return false

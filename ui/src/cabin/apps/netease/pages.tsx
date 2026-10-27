@@ -207,6 +207,7 @@ export function Mine({ shown }: { shown: boolean }) {
   const text = useText()
   const account = useAccount()
   const signingIn = useNetease((state) => state.signingIn)
+  const vip = useNetease((state) => state.vip)
   const words = text.netease
   if (account === 'in') {
     return (
@@ -219,6 +220,7 @@ export function Mine({ shown }: { shown: boolean }) {
             </span>
             <div className="ne-mine-text">
               <h1>{words.account}</h1>
+              {vip && <p className="ne-note">{vip}</p>}
               <p>{words.mineNote}</p>
             </div>
           </div>

@@ -274,9 +274,8 @@
       volume: volume(),
       shuffle: Boolean(shuffle),
       repeat: repeat ?? 'off',
-      // TODO(verify): the songs to come from the page's own queue (its play list, `#g_player`'s count button):
-      // the bar doesn't say them; none for now.
-      next: [],
+      // The songs to come: our own list's, when we play it; the page's queue the bar doesn't say (none).
+      next: directList?.tracks ? directList.tracks.slice(directAt + 1, directAt + 7) : [],
     }
   }
 
@@ -581,6 +580,7 @@
   let directElement = null
   let directList = null
   let directAt = 0
+  let directStepping = false
   const directContext = () => (directList ? { id: directList.playlist, name: '', kind: 'playlist' } : null)
   const directSong = async (song, playlist) => {
     const answer = await get(`/api/song/enhance/player/url?id=${song}&ids=[${song}]&br=320000`).catch(() => null)
@@ -594,11 +594,14 @@
       directElement = document.createElement('audio')
       directElement.preload = 'auto'
       document.documentElement.appendChild(directElement)
-      for (const name of ['play', 'pause', 'ended', 'seeked', 'loadedmetadata', 'timeupdate'])
+      for (const name of ['play', 'pause', 'seeked', 'loadedmetadata', 'timeupdate'])
         directElement.addEventListener(name, () => {
           tellPlayback()
           tellState(true)
         })
+      directElement.addEventListener('ended', () => {
+        void directEnded()
+      })
     }
     // The page's own player heard but not played over ours: the sound is one, this one.
     const page = findPlayback()
@@ -613,18 +616,89 @@
     tellState(true)
     return true
   }
-  const directStep = async (by) => {
-    if (!directTrack || !directList) return false
-    if (!directList.tracks) {
-      const found = await collection({ id: directList.playlist }).catch(() => null)
-      if (!found?.tracks?.length) return false
-      directList.tracks = found.tracks
-      directAt = Math.max(0, found.tracks.findIndex((each) => each.id === directTrack.id))
+  // A list's songs, in the order they play from the one playing: the list's own way, shuffled or kept, round
+  // at its end when it repeats.
+  const directOrder = (by) => {
+    const tracks = directList?.tracks
+    if (!tracks?.length) return []
+    if (shuffle) {
+      const order = [...Array(tracks.length).keys()].filter((at) => at !== directAt)
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[order[i], order[j]] = [order[j], order[i]]
+      }
+      return order
     }
-    const next = directList.tracks[directAt + by]
-    if (!next) return false
-    directAt += by
-    return directSong(next.id, directList.playlist)
+    const order = []
+    for (let step = 1; step <= tracks.length; step++) {
+      const at = directAt + by * step
+      if (at >= 0 && at < tracks.length) order.push(at)
+      else if (repeat === 'all') order.push(((at % tracks.length) + tracks.length) % tracks.length)
+    }
+    return [...new Set(order)]
+  }
+  // The next song that can be had: an unplayable one (VIP, region, gone) is left out, the one after tried.
+  const directStep = async (by) => {
+    if (!directTrack) return false
+    const list = directList
+    if (!list?.tracks) {
+      if (by === -1 && directElement) {
+        directElement.currentTime = 0
+        return true
+      }
+      return false
+    }
+    if (directStepping) return false
+    directStepping = true
+    try {
+      for (const at of directOrder(by)) {
+        if (await directSong(list.tracks[at].id, list.playlist)) {
+          directList = { playlist: list.playlist, tracks: list.tracks }
+          directAt = at
+          tellPlayback()
+          tellState(true)
+          return true
+        }
+      }
+      return false
+    } finally {
+      directStepping = false
+    }
+  }
+  const directPlayFrom = async (tracks, at, playlist) => {
+    for (let index = at; index < tracks.length; index++) {
+      if (await directSong(tracks[index].id, playlist)) {
+        directList = { playlist: String(playlist), tracks }
+        directAt = index
+        tellPlayback()
+        tellState(true)
+        return true
+      }
+    }
+    return false
+  }
+  const directPlaylist = async (playlist) => {
+    const found = await collection({ id: playlist }).catch(() => null)
+    if (!found?.tracks?.length) return playOnPage(undefined, playlist)
+    return directPlayFrom(found.tracks, 0, playlist)
+  }
+  // Its end: the next one (or the same, repeating one; or round the list).
+  const directEnded = async () => {
+    if (!directTrack || directStepping) return
+    if (repeat === 'one') {
+      if (directElement) {
+        directElement.currentTime = 0
+        await directElement.play().catch(() => {})
+      }
+      tellPlayback()
+      tellState(true)
+      return
+    }
+    const stepped = await directStep(1)
+    if (!stepped) {
+      tellPlayback()
+      tellState(true)
+    }
   }
 
   // TODO(verify): the old player bar's own loop and shuffle controls: the loop button (`.icn-loop`, cycling
@@ -638,7 +712,7 @@
   const CONTROLS = {
     play: ({ song, playlist }) => {
       if (song) return directSong(song, playlist).then((played) => played || playOnPage(song, playlist))
-      if (playlist) return playOnPage(song, playlist)
+      if (playlist) return directPlaylist(playlist)
       return playing() ? undefined : directTrack ? directElement?.play() : toggle()
     },
     pause: () => {
@@ -686,15 +760,19 @@
       tellPlayback()
     },
     shuffle: ({ on }) => {
-      const button = shuffleButton()
-      if (button && shuffle !== null && shuffle !== Boolean(on)) button.click()
+      if (!directTrack) {
+        const button = shuffleButton()
+        if (button && shuffle !== null && shuffle !== Boolean(on)) button.click()
+      }
       shuffle = Boolean(on)
       tellPlayback()
     },
     repeat: ({ mode }) => {
-      const button = loopButton()
-      // The loop button cycles off -> all -> one -> off; pressed until the mode asked for (at most three).
-      for (let tries = 0; button && repeat !== null && repeat !== mode && tries < 3; tries++) button.click()
+      if (!directTrack) {
+        const button = loopButton()
+        // The loop button cycles off -> all -> one -> off; pressed until the mode asked for (at most three).
+        for (let tries = 0; button && repeat !== null && repeat !== mode && tries < 3; tries++) button.click()
+      }
       repeat = mode
       tellPlayback()
     },

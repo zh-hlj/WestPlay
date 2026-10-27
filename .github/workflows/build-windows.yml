@@ -80,14 +80,29 @@ jobs:
           if (-not $base.plugins.updater) { $base.plugins.updater = @{} }
           $base.plugins.updater.endpoints = @()
           # Upstream's PREINSTALL hook probes WebView2 itself and false-negatives on some PCs that do have
-          # the runtime (this one: 155.x present, MSI/registry fine). Replace it with an empty hook: with
-          # webviewInstallMode skip above, the installer installs over the existing build without asking.
+          # the runtime (this one: 155.x present, MSI/registry fine). Replace it with our own hook:
+          # webviewInstallMode skip above means no probe, and the hook stops a running WestPlay and removes
+          # (or renames) a locked old westplay.exe before the installer writes — the "cannot open the file to
+          # write" failure over an existing C:\gameDATE\WestPlay. If the old file can't be cleared, install to
+          # the user's own folder instead of failing.
           New-Item -ItemType Directory -Force -Path src-tauri/installer | Out-Null
           @(
-            '; WestPlay (Chinese/NetEase fork): no PREINSTALL checks.',
-            '; webviewInstallMode is "skip" and the upstream WebView2 probe is replaced by this empty hook,',
-            '; so the installer can install over an existing WestPlay even where that probe false-negatives.',
+            '; WestPlay (Chinese/NetEase fork): install over an existing build.',
+            '; webviewInstallMode is "skip": the upstream WebView2 probe false-negatives on some PCs, so it is',
+            '; not run. A running app or a locked old westplay.exe used to make the installer fail to write',
+            '; over it; stopped and cleared here, and a folder still not writable becomes the user''s own folder.',
             '!macro NSIS_HOOK_PREINSTALL',
+            '  ExecWait ''"$SYSDIR\\taskkill.exe" /F /T /IM westplay.exe''',
+            '  Sleep 700',
+            '  CreateDirectory "$INSTDIR"',
+            '  SetFileAttributes "$INSTDIR\westplay.exe" NORMAL',
+            '  Delete "$INSTDIR\westplay.exe"',
+            '  Rename "$INSTDIR\westplay.exe" "$INSTDIR\westplay.exe.old"',
+            '  IfFileExists "$INSTDIR\westplay.exe" 0 done',
+            '  StrCpy $INSTDIR "$LOCALAPPDATA\WestPlay"',
+            '  CreateDirectory "$INSTDIR"',
+            '  MessageBox MB_OK "The old folder could not be written; WestPlay will be installed to: $INSTDIR"',
+            '  done:',
             '!macroend'
           ) -join "`n" | Set-Content src-tauri/installer/ci-hooks.nsh -Encoding utf8
           $base.bundle.windows.nsis.installerHooks = "installer/ci-hooks.nsh"
@@ -139,6 +154,37 @@ jobs:
           Get-ChildItem out/installer | Select-Object Name, Length
           Get-ChildItem target/release/bundle -Recurse -Filter *.exe -ErrorAction SilentlyContinue | Select-Object FullName
 
+      - name: Sign with the preview's self-signed certificate, add the trust helper
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=WestPlay Chinese Fork Preview' `
+            -FriendlyName 'WestPlay Chinese Fork Preview' -CertStoreLocation Cert:\CurrentUser\My `
+            -NotAfter (Get-Date).AddYears(5) -HashAlgorithm SHA256
+          Export-Certificate -Cert $cert -FilePath out/WestPlay-Preview.cer | Out-Null
+          $targets = @(Get-Item out/portable/westplay.exe) + @(Get-ChildItem out/installer/*.exe)
+          foreach ($file in $targets) {
+            $sig = Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256
+            Write-Host "signed $($file.Name): $($sig.Status)"
+          }
+          # Self-signed (no paid certificate): Windows still calls the publisher unknown until this preview
+          # certificate is trusted. The helper adds it to this user's Root/TrustedPublisher stores. Each build
+          # makes a new certificate, so run it again after an update.
+          Copy-Item out/WestPlay-Preview.cer out/portable/
+          @"
+          @echo off
+          certutil -user -addstore -f Root "%~dp0WestPlay-Preview.cer"
+          certutil -user -addstore -f TrustedPublisher "%~dp0WestPlay-Preview.cer"
+          echo Done. Run setup.exe (or westplay.exe) again.
+          pause
+          "@ | Set-Content -LiteralPath "out/portable/信任证书.bat" -Encoding utf8
+          Copy-Item out/portable/WestPlay-Preview.cer out/
+          Copy-Item -LiteralPath "out/portable/信任证书.bat" out/ -Force
+          Remove-Item out/WestPlay-2.1.0-netease-zh-portable-msvc.zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.0-netease-zh-portable-msvc.zip -Force
+          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.0-netease-zh-portable-msvc.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content out/SHA256SUMS.txt -Encoding ascii
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -146,6 +192,9 @@ jobs:
           path: |
             out/installer/*.exe
             out/WestPlay-2.1.0-netease-zh-portable-msvc.zip
+            out/WestPlay-Preview.cer
+            out/信任证书.bat
+            out/SHA256SUMS.txt
           if-no-files-found: error
 
       - name: Attach to the preview release
@@ -158,3 +207,6 @@ jobs:
           files: |
             out/installer/*.exe
             out/WestPlay-2.1.0-netease-zh-portable-msvc.zip
+            out/WestPlay-Preview.cer
+            out/信任证书.bat
+            out/SHA256SUMS.txt

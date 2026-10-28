@@ -69,6 +69,8 @@ enum Message {
     State(State),
     Answer(Box<Answer>),
     Playback(Option<Box<Playback>>),
+    /// The page's own debug line (the account and the vkey it got), for the host's log.
+    Debug(String),
 }
 
 /// What the host takes from QQ Music for the cabin page and the log.
@@ -190,6 +192,7 @@ impl Qq {
                     reports.push(Report::Answer(answer));
                 }
                 Some(Message::Playback(playback)) => reports.push(Report::Playback(playback)),
+                Some(Message::Debug(said)) => log!("[qq] debug: {said}"),
                 None => {}
             }
         }
@@ -218,6 +221,9 @@ fn read_message(message: &str) -> Option<Message> {
     let value: serde_json::Value = serde_json::from_str(message).ok()?;
     if value.get("ready").and_then(serde_json::Value::as_bool) == Some(true) {
         return Some(Message::Ready);
+    }
+    if let Some(said) = value.get("debug").and_then(serde_json::Value::as_str) {
+        return Some(Message::Debug(said.chars().take(500).collect()));
     }
     if let Some(answer) = value.get("answer") {
         // `qq.js`'s own shape: the payload under `answer`, its id with it.

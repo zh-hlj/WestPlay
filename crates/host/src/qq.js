@@ -30,14 +30,48 @@
       return found[1]
     }
   }
-  const uin = () => cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || ''
   const musicKey = () => cookie('qm_keyst') || cookie('qqmusic_key') || cookie('music_key') || cookie('p_skey') || ''
-  const signedIn = () => Boolean(uin() && musicKey())
-  // QQ Music's own membership cookies are not always there; the profile answer says what the app shows.
+  // The account: QQ Music's own profile answer, asked with the page's cookies (whether or not the cookies can be
+  // read here: an HttpOnly qm_keyst is still sent). It says the uin the vkey answer wants, and the membership.
+  let signed = false
+  let account = { uin: '', nick: '', avatar: null, vip: null }
+  let accountAt = 0
+  const uin = () => account.uin || cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || ''
+  const signedIn = () => signed || Boolean(uin() && cookie('qm_keyst'))
   const vip = () => {
+    if (account.vip) return account.vip
     const raw = cookie('vip_type') || cookie('qqmusic_vip') || ''
     if (/^\d+$/.test(raw)) return Number(raw) > 0 ? 'VIP' : '非VIP'
     return null
+  }
+  const debug = (what) => post({ debug: what })
+  const refreshAccount = async () => {
+    if (Date.now() - accountAt < 10_000) return
+    accountAt = Date.now()
+    try {
+      const answer = await getJSON(
+        'https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg?cid=205360838&userid=0&reqfrom=1&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&notice=0&platform=yqq.json&needNewCode=0',
+      )
+      const creator = answer?.data?.creator ?? answer?.data?.user ?? null
+      if (!creator) {
+        if (signed) debug('account signed out')
+        signed = false
+        account = { uin: '', nick: '', avatar: null, vip: null }
+        return
+      }
+      const vipType = Number(creator.vipType ?? creator.vip_type ?? creator.isVip ?? 0) || 0
+      account = {
+        uin: String(creator.uin ?? creator.encrypt_uin ?? ''),
+        nick: text(creator.nick ?? creator.name),
+        avatar: https(creator.headpic ?? creator.avatarUrl ?? creator.avatar),
+        vip: vipType > 0 ? 'VIP' : '非VIP',
+      }
+      if (!signed) debug(`account signed in uin=${account.uin ? 'yes' : 'no'}`)
+      signed = true
+    } catch (e) {
+      // The profile not this turn: the cookies still say whether there is a key.
+      signed = Boolean((cookie('uin') || cookie('qqmusic_uin')) && (musicKey() || cookie('p_skey')))
+    }
   }
 
   // --- QQ Music's own API: the web player's signed requests -----------------------------------------------------
@@ -232,6 +266,7 @@
     return found
   }
   const library = async () => {
+    await refreshAccount()
     const uid = uin()
     if (!uid) throw new Error('not signed in')
     const sections = []
@@ -281,6 +316,7 @@
     return `${quality}${mid}${extension}`
   }
   const URL_OF = async (song, premium) => {
+    await refreshAccount()
     const mid = String(song)
     const qualities = premium
       ? ['F000', 'M800', 'C600', 'M500', 'C400']
@@ -313,6 +349,9 @@
         if (url) return url
       }
     }
+    debug(
+      `vkey empty login=${signedIn() ? 'yes' : 'no'} uin=${uin() ? 'yes' : 'no'} key=${musicKey() ? 'yes' : 'no'} names=${(data.midurlinfo ?? []).map((one) => one?.result).join(',')}`,
+    )
     return null
   }
   const player = async () => {
@@ -474,12 +513,14 @@
     post({ state })
   }
   const poll = () => {
-    tellState()
-    tellPlayback()
-    if (lastPlayback && !lastPlayback.playing) {
-      // The app's own time doesn't run here: a pause is only said when it changes.
-    }
-    setTimeout(poll, 700)
+    refreshAccount().finally(() => {
+      tellState()
+      tellPlayback()
+      if (lastPlayback && !lastPlayback.playing) {
+        // The app's own time doesn't run here: a pause is only said when it changes.
+      }
+      setTimeout(poll, 700)
+    })
   }
 
   // --- The app's commands ----------------------------------------------------------------------------------------
@@ -536,8 +577,10 @@
 
   // --- Its page, ready -------------------------------------------------------------------------------------------
   const start = () => {
-    tellState(true)
-    tellPlayback()
+    refreshAccount().finally(() => {
+      tellState(true)
+      tellPlayback()
+    })
     poll()
     post({ ready: true })
   }

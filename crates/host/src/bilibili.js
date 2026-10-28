@@ -101,11 +101,29 @@
     }
   }
 
-  // Home: Bilibili's popular videos.
+  // Home: Bilibili's popular videos and its ranking, each video once (a video both has is in popular's).
   const home = async () => {
-    const answer = await api('/x/web-interface/popular?ps=20&pn=1')
-    const items = (answer?.data?.list ?? []).map(itemOf).filter(Boolean)
-    return items.length ? { sections: [{ title: '哔哩哔哩热门', items }] } : { sections: [] }
+    const seen = new Set()
+    const itemsOf = (answer) =>
+      (answer?.data?.list ?? (answer?.data ?? []))
+        .map(itemOf)
+        .filter((item) => item && !seen.has(item.id) && seen.add(item.id))
+    let popular = []
+    let ranking = []
+    try {
+      popular = itemsOf(await api('/x/web-interface/popular?ps=20&pn=1'))
+    } catch {
+      // Its popular not this turn: the ranking may still be.
+    }
+    try {
+      ranking = itemsOf(await api('/x/web-interface/ranking/v2?rid=0&type=all'))
+    } catch {
+      // No ranking this turn: the popular's enough.
+    }
+    const sections = []
+    if (popular.length) sections.push({ title: '哔哩哔哩热门', items: popular })
+    if (ranking.length) sections.push({ title: '排行榜', items: ranking })
+    return { sections }
   }
   const search = async ({ query }) => {
     const answer = await api(
@@ -230,6 +248,10 @@
   // The video itself: Bilibili's page shows it full page (its own interface hidden), the host placing the page
   // under the cabin page's video area. Muted: its sound is the element the truck's speakers take.
   let picture = null
+  // The video address of the track playing, and whether the app shows the picture now: the picture is only made
+  // (and played) while shown, not for the app's sound-only use.
+  let pendingPicture = null
+  let pictureShown = false
   const hidePageUi = () => {
     if (document.getElementById('westplay-bilibili-style')) return
     const style = document.createElement('style')
@@ -288,7 +310,8 @@
       audio.volume = volumeWanted ?? 0.8
       audio.src = await sourceOf(url)
       await audio.play().catch((e) => debug(`audio play failed ${String(e).slice(0, 80)}`))
-      await showPicture(media.video[0])
+      pendingPicture = media.video[0] ?? null
+      if (pictureShown) await showPicture(pendingPicture)
       tellPlayback()
       tellState(true)
       return true
@@ -451,8 +474,13 @@
   window.chrome?.webview?.addEventListener('message', ({ data }) => {
     try {
       if (CAB[data?.action]) CAB[data.action](data)
-      else if (data?.action === 'videoShow') void picture?.play().catch(() => {})
-      else if (data?.action === 'videoHide') picture?.pause()
+      else if (data?.action === 'videoShow') {
+        pictureShown = true
+        void showPicture(pendingPicture)
+      } else if (data?.action === 'videoHide') {
+        pictureShown = false
+        picture?.pause()
+      }
       else if (data?.action === 'ask') answer(data.id, data.question)
       else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})
     } catch {

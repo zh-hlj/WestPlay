@@ -34,6 +34,8 @@ const SERVICES: Record<
     signingIn(status: HostStatus | null): boolean
     /** Its words while signing in (YouTube's and NetEase Cloud Music's are the accounts' own). */
     words(words: Words): { finishInWindow: string; signingIn: Note }
+    /** A note shown by its name (QQ Music: the login that can play). */
+    hint?: string
   }
 > = {
   youtube: {
@@ -74,6 +76,7 @@ const SERVICES: Record<
   },
   qq: {
     name: 'QQ 音乐',
+    hint: '播放需 QQ 账号',
     app: 'qq',
     glow: GLOW.qq,
     signIn: qqSignIn,
@@ -140,6 +143,7 @@ function Account({
     <Row
       title={s.name}
       detail={checking ? undefined : signingIn ? s.words(words).finishInWindow : signedIn ? w.signedIn : w.notSignedIn}
+      value={s.hint}
       hover={hover}
       accessory={
         checking ? (

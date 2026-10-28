@@ -11,6 +11,8 @@ import {
   appleMusicSignOut,
   neteaseSignIn,
   neteaseSignOut,
+  qqSignIn,
+  qqSignOut,
   spotifySignIn,
   spotifySignOut,
   youtubeSignIn,
@@ -68,9 +70,18 @@ const SERVICES: Record<
     signingIn: (status) => status?.neteaseSigningIn ?? false,
     words: (words) => words.accounts,
   },
+  qq: {
+    name: 'QQ 音乐',
+    app: 'netease',
+    glow: GLOW.netease,
+    signIn: qqSignIn,
+    signOut: qqSignOut,
+    signingIn: (status) => status?.qqSigningIn ?? false,
+    words: (words) => words.accounts,
+  },
 }
 
-const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'netease']
+const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'netease', 'qq']
 
 /**
  * The services WestPlay plays from, each signed in (in its own window, on the desktop) or not. WestPlay only

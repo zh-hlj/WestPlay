@@ -421,6 +421,8 @@ export interface Strings {
   /** NetEase Cloud Music: WestPlay's own app, in the look of NetEase Cloud Music's app. */
   netease: {
     tabs: { home: string; search: string; mine: string }
+    /** The two services the app shows (NetEase Cloud Music, QQ Music). */
+    sources: { netease: string; qq: string }
     searchHint: string
     cancel: string
     search: string
@@ -944,6 +946,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: 'Home', search: 'Search', mine: 'Mine' },
+      sources: { netease: 'NetEase', qq: 'QQ Music' },
       searchHint: 'Search songs, artists, playlists',
       cancel: 'Cancel',
       search: 'Search',
@@ -1468,6 +1471,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: 'Ana Sayfa', search: 'Ara', mine: 'Benim' },
+      sources: { netease: 'NetEase', qq: 'QQ Music' },
       searchHint: 'Şarkı, sanatçı, çalma listesi ara',
       cancel: 'İptal',
       search: 'Ara',
@@ -1993,6 +1997,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: '首页', search: '搜索', mine: '我的' },
+      sources: { netease: '网易云', qq: 'QQ音乐' },
       searchHint: '搜索歌曲、歌手、歌单',
       cancel: '取消',
       search: '搜索',

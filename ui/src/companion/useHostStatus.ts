@@ -33,6 +33,9 @@ export interface HostStatus {
   /** The same of NetEase Cloud Music: signed in or not (`null`: not known yet), and its sign-in window open. */
   neteaseSignedIn: boolean | null
   neteaseSigningIn: boolean
+  /** The same of QQ Music: signed in or not (`null`: not known yet), and its sign-in window open. */
+  qqSignedIn: boolean | null
+  qqSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -147,6 +150,21 @@ export function neteaseSignOut(): Promise<void> {
 /** Runs NetEase Cloud Music's web player (hidden), so the status says whether it's signed in. */
 export function neteaseCheck(): Promise<void> {
   return call('netease_check')
+}
+
+/** Opens QQ Music's sign-in in a window on the desktop (a QR code, scanned by its phone app). */
+export function qqSignIn(): Promise<void> {
+  return call('qq_sign_in')
+}
+
+/** Signs QQ Music out. */
+export function qqSignOut(): Promise<void> {
+  return call('qq_sign_out')
+}
+
+/** Runs QQ Music's web player (hidden), so the status says whether it's signed in. */
+export function qqCheck(): Promise<void> {
+  return call('qq_check')
 }
 
 /** Opens the support page (Kreosus) in the player's browser. */

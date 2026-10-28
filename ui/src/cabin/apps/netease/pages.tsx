@@ -39,7 +39,8 @@ function Answered<A>({
 
 /** Home: NetEase Cloud Music's recommendation shelves. */
 export function Home({ shown }: { shown: boolean }) {
-  const asked = useAsked({ ask: 'home' }, useShownAgain(shown))
+  const source = useNetease((state) => state.source)
+  const asked = useAsked({ ask: 'home' }, useShownAgain(shown) + (source === 'qq' ? 1 : 0))
   return (
     <PageBody>
       <Answered asked={asked}>
@@ -249,7 +250,8 @@ export function Mine({ shown }: { shown: boolean }) {
 
 /** Mine's own lists, signed in: the account's playlists (NetEase's own API), each opening as a page. */
 function MineLibrary({ shown }: { shown: boolean }) {
-  const asked = useAsked({ ask: 'library' }, useShownAgain(shown))
+  const source = useNetease((state) => state.source)
+  const asked = useAsked({ ask: 'library' }, useShownAgain(shown) + (source === 'qq' ? 1 : 0))
   return (
     <Answered asked={asked} rows>
       {(answer: NeteaseAnswers['library']) =>

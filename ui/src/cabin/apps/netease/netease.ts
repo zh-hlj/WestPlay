@@ -52,6 +52,8 @@ export type Question = NeteaseQuestion
 export type Answers = NeteaseAnswers
 export type Repeat = NeteaseRepeat
 
+export type Source = 'netease' | 'qq'
+
 export type Tab = 'home' | 'search' | 'mine'
 /** The tabs of the bottom bar, in its order (Search is the top bar's, as NetEase's app has it). */
 export const TABS: readonly Tab[] = ['home', 'search', 'mine']
@@ -73,6 +75,8 @@ export interface Playback extends Timed {
 }
 
 interface NeteaseState {
+  /** Which service the app shows: NetEase Cloud Music or QQ Music. */
+  source: Source
   /** Whether NetEase Cloud Music's web player is signed in (the host says; kept as last said): `null` until known. */
   signedIn: boolean | null
   playing: boolean | null
@@ -100,6 +104,7 @@ export const useNetease = create<NeteaseState>()(
   persist(
     (): NeteaseState => ({
       // Outside WestPlay (a plain browser) there's no host to say: the preview starts signed out.
+      source: 'netease',
       signedIn: isInHost() ? null : false,
       playing: null,
       signingIn: false,
@@ -134,9 +139,9 @@ export const useNetease = create<NeteaseState>()(
   ),
 )
 
-/** A command for NetEase Cloud Music's web player (nothing happens in a plain browser preview). */
+/** A command for the service shown (nothing happens in a plain browser preview). */
 export function netease(command: NeteaseCommand): void {
-  postToHost({ type: 'netease', command })
+  postToHost(useNetease.getState().source === 'qq' ? { type: 'qq', command } : { type: 'netease', command })
 }
 
 // --- The account -------------------------------------------------------------------------------------------
@@ -204,6 +209,49 @@ export const ask = asking.ask
 export const useAsked = asking.useAsked
 /** NetEase Cloud Music's answer (`neteaseAnswer`), for the question asked with its id. */
 export const receiveAnswer = asking.receive
+
+/** The service switched: nothing of the other one is kept (its answers asked again, for the other). */
+export function setSource(source: Source): void {
+  if (useNetease.getState().source === source) return
+  asking.clear()
+  useNetease.setState({
+    source,
+    signedIn: null,
+    signingIn: false,
+    vip: null,
+    playback: null,
+    nowPlaying: false,
+    lyrics: false,
+    views: NO_VIEWS,
+    tab: 'home',
+  })
+  netease({ action: 'start' })
+}
+
+function shown(source: Source): boolean {
+  return useNetease.getState().source === source
+}
+
+/** A state said by `source`: the other service's is not the app's while it isn't shown. */
+export function receiveStateFrom(
+  source: Source,
+  message: { signedIn: boolean | null; playing: boolean | null; signingIn: boolean; vip?: string | null },
+): void {
+  if (shown(source)) receiveState(message)
+}
+
+/** An answer said by `source`. */
+export function receiveAnswerFrom(
+  source: Source,
+  message: { id: number; failed?: boolean } & Partial<Answers>,
+): void {
+  if (shown(source)) receiveAnswer(message)
+}
+
+/** A playback said by `source`. */
+export function receivePlaybackFrom(source: Source, playback: NeteasePlayback | null): void {
+  if (shown(source)) receivePlayback(playback)
+}
 
 // Signed in or out: nothing's kept of what the account had (its answers asked again, for the other).
 useNetease.subscribe((state, before) => {

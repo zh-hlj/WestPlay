@@ -55,3 +55,11 @@
 - `app/src/main.rs`：`qq_sign_in` / `qq_sign_out` / `qq_check` Tauri 命令注册。
 - 验证：`cargo test -p westplay-host --lib qq::` 5/5；`cargo check -p westplay-host` ✅；`cargo check -p westplay-app`（ASCII 源码副本）✅。
 - 下一步：UI——车内音乐 App 加「网易云 / QQ音乐」切换、companion 账号页 QQ 登录行、host.ts/媒体/图标/字符串；跑 tsc+vitest。
+
+## 2026-10-28 · 里程碑 3d：QQ 音乐 UI（源切换 + companion 登录行）
+
+- 车内音乐 App 顶部加「网易云 / QQ音乐」切换；`setSource` 清空旧服务状态并让 Home/我的重新提问；命令按来源发 `type:'netease'|'qq'`，收到的消息按来源过滤。
+- companion「账号」页新增 **QQ 音乐** 登录行（复用通用账号文案）；HostStatus/accounts/preview 全部接通。
+- 中文字典 en/tr/zh 加 `sources`（网易云 / QQ Music）。
+- 验证：`tsc -b` 0 错误；`vitest` 64 文件 / 451 测试全过。
+- 下一步：CI 构建 QQ 预览版（含签名/安装器修复），真机验证登录/vkey/播放。

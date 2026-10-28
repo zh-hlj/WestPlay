@@ -29,9 +29,9 @@ import {
 } from '../apps/spotify/spotify'
 import { receiveAnswer, receiveState, useYouTube } from '../apps/youtube/youtube'
 import {
-  receiveAnswer as receiveNeteaseAnswer,
-  receivePlayback as receiveNeteasePlayback,
-  receiveState as receiveNeteaseState,
+  receiveAnswerFrom as receiveNeteaseAnswerFrom,
+  receivePlaybackFrom as receiveNeteasePlaybackFrom,
+  receiveStateFrom as receiveNeteaseStateFrom,
 } from '../apps/netease/netease'
 import {
   receiveAnswer as receiveYouTubeMusicAnswer,
@@ -558,13 +558,22 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
         receiveYouTubeMusicPlayback(message.playback)
         break
       case 'netease':
-        receiveNeteaseState(message)
+        receiveNeteaseStateFrom('netease', message)
         break
       case 'neteaseAnswer':
-        receiveNeteaseAnswer(message)
+        receiveNeteaseAnswerFrom('netease', message)
         break
       case 'neteasePlayback':
-        receiveNeteasePlayback(message.playback)
+        receiveNeteasePlaybackFrom('netease', message.playback)
+        break
+      case 'qq':
+        receiveNeteaseStateFrom('qq', message)
+        break
+      case 'qqAnswer':
+        receiveNeteaseAnswerFrom('qq', message)
+        break
+      case 'qqPlayback':
+        receiveNeteasePlaybackFrom('qq', message.playback)
         break
       case 'youtubeAnswer': {
         const { type: _, id, ...answer } = message

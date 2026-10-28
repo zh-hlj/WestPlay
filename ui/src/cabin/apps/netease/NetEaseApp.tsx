@@ -10,6 +10,7 @@ import {
   TABS,
   goBack,
   openTab,
+  setSource,
   openView,
   remember,
   showToast,
@@ -32,6 +33,7 @@ const FIELD = 'netease-search'
  */
 export function NetEaseApp() {
   const text = useText()
+  const source = useNetease((state) => state.source)
   const tab = useNetease((state) => state.tab)
   const views = useNetease((state) => state.views)
   const account = useAccount()
@@ -114,7 +116,21 @@ export function NetEaseApp() {
         ) : (
           <span className="ne-brand" aria-hidden>
             <MarkGlyph size={36} />
-            <b>{text.apps.netease}</b>
+            <b>{words.sources[source]}</b>
+          </span>
+        )}
+        {!searching && (
+          <span className="ne-sources">
+            <button
+              type="button"
+              className={source === 'netease' ? 'ne-pill on' : 'ne-pill'}
+              onClick={() => setSource('netease')}
+            >
+              {words.sources.netease}
+            </button>
+            <button type="button" className={source === 'qq' ? 'ne-pill on' : 'ne-pill'} onClick={() => setSource('qq')}>
+              {words.sources.qq}
+            </button>
           </span>
         )}
         {searching ? (

@@ -1585,6 +1585,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let mut state_changed = false;
                 for report in player.take_reports() {
                     match report {
+                        qq::Report::Spectrum(bars) => {
+                            let _ = webview.post_json(&speakers::spectrum_message(&bars));
+                        }
                         qq::Report::State(state) => {
                             if status.qq_signed_in != Some(state.signed_in) {
                                 status.qq_signed_in = Some(state.signed_in);
@@ -1660,6 +1663,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let mut state_changed = false;
                 for report in player.take_reports() {
                     match report {
+                        bilibili::Report::Spectrum(bars) => {
+                            let _ = webview.post_json(&speakers::spectrum_message(&bars));
+                        }
                         bilibili::Report::State(state) => {
                             if status.bilibili_signed_in != Some(state.signed_in) {
                                 status.bilibili_signed_in = Some(state.signed_in);
@@ -1768,6 +1774,12 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 let _ = player.cab(truck_speakers, head, outside, distance, equalizer, spectrum);
             }
             if let Some(player) = &netease {
+                let _ = player.cab(truck.id.as_str(), head, outside, distance, equalizer, spectrum);
+            }
+            if let Some(player) = &qq {
+                let _ = player.cab(truck.id.as_str(), head, outside, distance, equalizer, spectrum);
+            }
+            if let Some(player) = &bilibili {
                 let _ = player.cab(truck.id.as_str(), head, outside, distance, equalizer, spectrum);
             }
         }

@@ -2,7 +2,8 @@
 // PC) kept in this profile's cookies. This script reads the account and QQ Music's own API (`u.y.qq.com` /
 // `c.y.qq.com`, same site, cookies with `credentials: 'include'`) and plays what the app asks for in an element
 // of its own: the page's own player is not used. The WebView has CORS enforcement off for its profile only
-// (`webview.rs`'s extra arguments), so the page's fetch can read the API's answers.
+// (`webview.rs`'s extra arguments), so the page's fetch can read the API's answers, and a song's own bytes: it
+// plays them as a blob, so the truck's speakers (cab_sound.js) can take the sound through Web Audio.
 //
 // Answers, playback and state are shaped as the NetEase service's (`netease.rs`): the cabin's app is the same,
 // with the service switched to QQ Music.
@@ -375,6 +376,22 @@
     })
     return element
   }
+  // The truck's speakers take the element's sound through the Web Audio API, which reads only what the page's
+  // own origin may read: QQ Music's CDN gives no CORS, so a song's bytes are fetched in the page (this profile's
+  // browser has CORS off) and played from a blob of them. Kept per address: a song played again is fetched once.
+  const blobs = new Map()
+  const blobOf = async (url) => {
+    const kept = blobs.get(url)
+    if (kept) return kept
+    const response = await fetch(url, { credentials: 'include' })
+    if (!response.ok) throw new Error(`audio ${response.status}`)
+    const objectURL = URL.createObjectURL(await response.blob())
+    blobs.set(url, objectURL)
+    return objectURL
+  }
+  // A song's sound: the blob when it can be had (the truck's speakers take it), the CDN's own address when not
+  // (no 3D sound, but the sound plays).
+  const sourceOf = (url) => blobOf(url).catch(() => url)
   const playFrom = async (tracks, index, playlist) => {
     for (let start = index; start < tracks.length; start++) {
       const track = tracks[start]
@@ -386,7 +403,7 @@
       queue = { playlist, tracks }
       context = playlist ? { id: playlist, name: '', kind: 'playlist' } : null
       audio.volume = volumeWanted ?? 0.8
-      audio.src = url
+      audio.src = await sourceOf(url)
       await audio.play().catch(() => {})
       tellPlayback()
       tellState(true)
@@ -454,7 +471,7 @@
         const audio = await player()
         current = track
         at = index
-        audio.src = url
+        audio.src = await sourceOf(url)
         await audio.play().catch(() => {})
         tellPlayback()
         tellState(true)
@@ -567,9 +584,25 @@
     },
   }
 
+  // --- The truck's speakers -------------------------------------------------------------------------------------
+  //
+  // The page's sound through the truck's own speakers (cab_sound.js, loaded first), told the speakers, the head,
+  // the camera, the tone and the spectrum by the host; the element it takes is the one playing now (none before
+  // the first song).
+  const cab = window.westplayCabSound?.(() => element, post)
+  const CAB = {
+    speakers: (data) => cab?.speakers(data.speakers),
+    // The host flattens the head and the tone into the message (netease.rs's Cab); a nested shape works too.
+    head: (data) => cab?.head(data.head ?? data),
+    outside: (data) => cab?.outside(data.on, data.distance),
+    equalizer: (data) => cab?.equalizer(data.equalizer ?? data),
+    spectrum: (data) => cab?.spectrum(data.on),
+  }
+
   window.chrome?.webview?.addEventListener('message', ({ data }) => {
     try {
-      if (data?.action === 'ask') answer(data.id, data.question)
+      if (CAB[data?.action]) CAB[data.action](data)
+      else if (data?.action === 'ask') answer(data.id, data.question)
       else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})
     } catch {
       // Nothing to press, or the page's own.
@@ -578,6 +611,9 @@
 
   // --- Its page, ready -------------------------------------------------------------------------------------------
   const start = () => {
+    // The truck's speakers: each pass, the element playing now, its volume (the app's slider), and the context
+    // woken (cab_sound.js).
+    if (cab) setInterval(() => cab.tick(), 250)
     refreshAccount().finally(() => {
       tellState(true)
       tellPlayback()

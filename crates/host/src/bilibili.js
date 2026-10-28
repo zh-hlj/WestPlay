@@ -3,8 +3,9 @@
 // fetch may read it: checked 2026-10-28), shows a video's audio through an element of its own, and answers the
 // music app's questions in the shapes the NetEase service uses (a video is a "song": its bvid is its id).
 //
-// The video's picture is not shown (v1: sound only); its audio's CDN (mcdn.bilivideo.cn) has no CORS, so it
-// plays through the page's own output, not the truck's speakers' Web Audio (no 3D sound for Bilibili yet).
+// The video's picture is not shown (v1: sound only). Its audio's CDN (mcdn.bilivideo.cn) has no CORS, so the
+// page fetches the audio's bytes itself (this profile's browser has CORS off) and plays them from a blob: the
+// truck's speakers (cab_sound.js) take the sound through Web Audio, as the other services'.
 ;;(() => {
   if (location.hostname !== 'www.bilibili.com' || window.top !== window) return
   const post = (message) => window.chrome?.webview?.postMessage(message)
@@ -195,6 +196,22 @@
     })
     return element
   }
+  // The truck's speakers take the element's sound through the Web Audio API, which reads only what the page's
+  // own origin may read: Bilibili's CDN gives no CORS, so a video's audio is fetched in the page (this profile's
+  // browser has CORS off) and played from a blob of it. Kept per address: a video played again is fetched once.
+  const blobs = new Map()
+  const blobOf = async (url) => {
+    const kept = blobs.get(url)
+    if (kept) return kept
+    const response = await fetch(url, { credentials: 'include' })
+    if (!response.ok) throw new Error(`audio ${response.status}`)
+    const objectURL = URL.createObjectURL(await response.blob())
+    blobs.set(url, objectURL)
+    return objectURL
+  }
+  // A video's sound: the blob when it can be had (the truck's speakers take it), the CDN's own address when not
+  // (no 3D sound, but the sound plays).
+  const sourceOf = (url) => blobOf(url).catch(() => url)
   const playOne = async (track, index, playlist) => {
     try {
       let cid = cidOf.get(track.id)
@@ -217,7 +234,7 @@
       queue = playlist ? { playlist, tracks: queue?.tracks ?? null } : null
       context = playlist ? { id: playlist, name: '', kind: 'playlist' } : null
       audio.volume = volumeWanted ?? 0.8
-      audio.src = url
+      audio.src = await sourceOf(url)
       await audio.play().catch((e) => debug(`audio play failed ${String(e).slice(0, 80)}`))
       tellPlayback()
       tellState(true)
@@ -360,9 +377,25 @@
     },
   }
 
+  // --- The truck's speakers -------------------------------------------------------------------------------------
+  //
+  // The page's sound through the truck's own speakers (cab_sound.js, loaded first), told the speakers, the head,
+  // the camera, the tone and the spectrum by the host; the element it takes is the one playing now (none before
+  // the first video).
+  const cab = window.westplayCabSound?.(() => element, post)
+  const CAB = {
+    speakers: (data) => cab?.speakers(data.speakers),
+    // The host flattens the head and the tone into the message (netease.rs's Cab); a nested shape works too.
+    head: (data) => cab?.head(data.head ?? data),
+    outside: (data) => cab?.outside(data.on, data.distance),
+    equalizer: (data) => cab?.equalizer(data.equalizer ?? data),
+    spectrum: (data) => cab?.spectrum(data.on),
+  }
+
   window.chrome?.webview?.addEventListener('message', ({ data }) => {
     try {
-      if (data?.action === 'ask') answer(data.id, data.question)
+      if (CAB[data?.action]) CAB[data.action](data)
+      else if (data?.action === 'ask') answer(data.id, data.question)
       else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})
     } catch {
       // Nothing to press, or the page's own.
@@ -377,6 +410,9 @@
     })
   }
   const start = () => {
+    // The truck's speakers: each pass, the element playing now, its volume (the app's slider), and the context
+    // woken (cab_sound.js).
+    if (cab) setInterval(() => cab.tick(), 250)
     refreshAccount().finally(() => {
       tellState(true)
       tellPlayback()

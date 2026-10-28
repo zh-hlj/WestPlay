@@ -6,6 +6,10 @@
 //! playlist, lyrics and the account's lists) as the page asks it, and its cookie names (`uin`, `qm_keyst`): the
 //! page fetch needs CORS off for this profile (`webview.rs`'s `new_with_arguments`), and playback needs the
 //! login's vkey (a player's PC, 2026-10-28: search works signed out; the vkey answer is empty without a login).
+//!
+//! Its sound comes from the truck's own speakers, as the others' do (`cab_sound.js`, told the truck's speakers,
+//! the driver's head and the camera): a song's bytes are fetched in the page (the CDN gives no CORS) and played
+//! as a blob, so Web Audio can take the sound.
 
 use std::cell::RefCell;
 use std::path::Path;
@@ -13,6 +17,7 @@ use std::path::Path;
 pub use crate::netease::State;
 use crate::netease::{Answer, Playback, Question, Repeat};
 use crate::signin::{self, Confirming, Progress, SignInWindow};
+use crate::speakers::{self, Equalizer, Head, Speaker};
 use crate::webview::{self, OffscreenWebView, Stage};
 
 /// QQ Music's page (its own web player; the account's own sign-in is a dialog of this page).
@@ -76,6 +81,8 @@ enum Message {
 /// What the host takes from QQ Music for the cabin page and the log.
 #[derive(Debug, PartialEq)]
 pub enum Report {
+    /// The music's spectrum, while the cab's Equalizer asks for it ([`speakers::read_spectrum`]).
+    Spectrum(Vec<u8>),
     /// The sign-in window opened (`true`) or closed.
     SignInWindow(bool),
     /// The window closed signed in, and its page is yet to say it's signed in (`true`), or it has (or took too
@@ -93,6 +100,48 @@ pub struct Qq {
     pending: RefCell<Vec<Report>>,
     /// The app's questions not answered yet: asked again as the page is ready anew.
     unanswered: RefCell<Vec<(u32, String)>>,
+    /// What the page was told of the cab, sent again when it loads anew.
+    told: RefCell<Told>,
+}
+
+/// What the host tells QQ Music's page of the cab (never the cabin page's to send): the truck's speakers (`None`:
+/// as it is, a truck whose speakers aren't known), the driver's head, and the camera outside (its distance,
+/// metres; 0: not known). As NetEase's (netease.rs).
+#[derive(Debug, PartialEq, serde::Serialize)]
+#[serde(tag = "action", rename_all = "camelCase")]
+enum Cab {
+    Speakers {
+        speakers: Option<Vec<Speaker>>,
+    },
+    Head {
+        #[serde(flatten)]
+        head: Head,
+    },
+    Outside {
+        on: bool,
+        distance: f32,
+    },
+    /// The player's tone (the cab's Settings › Sound): bass, mid and treble, dB each.
+    Equalizer {
+        #[serde(flatten)]
+        equalizer: Equalizer,
+    },
+    /// The music's spectrum wanted (the cab's Equalizer open) or not: the page says it as it plays.
+    Spectrum {
+        on: bool,
+    },
+}
+
+/// What the page was told last of the cab (sent again to a page that loaded anew): the truck, and the speakers,
+/// head, camera and tone messages.
+#[derive(Debug, Default)]
+struct Told {
+    truck: Option<String>,
+    head: Option<Head>,
+    camera: Option<(bool, f32)>,
+    equalizer: Option<Equalizer>,
+    spectrum: Option<bool>,
+    messages: [Option<String>; 5],
 }
 
 impl Qq {
@@ -102,7 +151,8 @@ impl Qq {
         view.log_as("qq")?;
         view.show(false)?;
         stage.add(&view, false)?;
-        view.add_startup_script(include_str!("qq.js"))?;
+        // The truck speakers' sound first: the page's script makes its own of it.
+        view.add_startup_script(concat!(include_str!("cab_sound.js"), "\n", include_str!("qq.js")))?;
         view.navigate(HOME)?;
         Ok(Self {
             view,
@@ -110,6 +160,7 @@ impl Qq {
             confirming: Confirming::default(),
             pending: RefCell::new(Vec::new()),
             unanswered: RefCell::new(Vec::new()),
+            told: RefCell::default(),
         })
     }
 
@@ -165,6 +216,56 @@ impl Qq {
         }
     }
 
+    /// The truck (its SDK model id), the driver's head, and whether the camera is outside the cab and how far
+    /// (metres; 0: not known): the page is told the truck's speakers as the truck changes, the head as it moves,
+    /// the camera as it goes in or out or a quarter metre further, the tone as it's set and the spectrum as it's
+    /// wanted (as NetEase's: netease.rs).
+    pub fn cab(
+        &self,
+        truck: &str,
+        head: Head,
+        outside: bool,
+        distance: f32,
+        equalizer: Equalizer,
+        spectrum: bool,
+    ) -> windows::core::Result<()> {
+        let mut told = self.told.borrow_mut();
+        // The head first: the speakers' loudness is set from where it is as they're placed.
+        if told.head != Some(head) && head.is_sound() {
+            told.head = Some(head);
+            let message = serde_json::to_string(&Cab::Head { head }).unwrap_or_default();
+            told.messages[1] = Some(message.clone());
+            self.view.post_json(&message)?;
+        }
+        if told.truck.as_deref() != Some(truck) {
+            told.truck = Some(truck.to_owned());
+            let speakers = speakers::in_truck(truck).map(<[_]>::to_vec);
+            let message = serde_json::to_string(&Cab::Speakers { speakers }).unwrap_or_default();
+            told.messages[0] = Some(message.clone());
+            self.view.post_json(&message)?;
+        }
+        let camera = (outside, if outside { (distance * 4.0).round() / 4.0 } else { 0.0 });
+        if told.camera != Some(camera) && camera.1.is_finite() {
+            told.camera = Some(camera);
+            let message = serde_json::to_string(&Cab::Outside { on: camera.0, distance: camera.1 }).unwrap_or_default();
+            told.messages[2] = Some(message.clone());
+            self.view.post_json(&message)?;
+        }
+        if told.equalizer != Some(equalizer) {
+            told.equalizer = Some(equalizer);
+            let message = serde_json::to_string(&Cab::Equalizer { equalizer }).unwrap_or_default();
+            told.messages[3] = Some(message.clone());
+            self.view.post_json(&message)?;
+        }
+        if told.spectrum != Some(spectrum) {
+            told.spectrum = Some(spectrum);
+            let message = serde_json::to_string(&Cab::Spectrum { on: spectrum }).unwrap_or_default();
+            told.messages[4] = Some(message.clone());
+            self.view.post_json(&message)?;
+        }
+        Ok(())
+    }
+
     /// What its page said since the last call, and the sign-in window opening or closing (signed in, the page
     /// loads again, signed in).
     pub fn take_reports(&self) -> Vec<Report> {
@@ -180,8 +281,16 @@ impl Qq {
             }
         }
         for message in self.view.take_page_messages() {
+            if let Some(bars) = speakers::read_spectrum(&message) {
+                reports.push(Report::Spectrum(bars));
+                continue;
+            }
             match read_message(&message) {
                 Some(Message::Ready) => {
+                    // A page loaded anew: the cab as it is, and the questions it missed.
+                    for told in self.told.borrow().messages.iter().flatten() {
+                        let _ = self.view.post_json(told);
+                    }
                     for (_, sent) in self.unanswered.borrow().iter() {
                         let _ = self.view.post_json(sent);
                     }

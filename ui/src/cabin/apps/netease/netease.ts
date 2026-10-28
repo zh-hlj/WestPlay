@@ -216,6 +216,8 @@ export const receiveAnswer = asking.receive
 /** The service switched: nothing of the other one is kept (its answers asked again, for the other). */
 export function setSource(source: Source): void {
   if (useNetease.getState().source === source) return
+  // The service left stops: two services playing at once (each is its own app now) is never wanted.
+  if (isInHost() && useNetease.getState().playback?.playing) netease({ action: 'pause' })
   asking.clear()
   useNetease.setState({
     source,

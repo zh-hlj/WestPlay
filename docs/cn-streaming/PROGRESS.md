@@ -131,3 +131,10 @@
 - 拆分：`APPS` 新增 `qq` / `bilibili`；Home/Sidebar 各显示独立图标（新画 `qq.*.svg`、`bilibili.*.svg`）；AppScreen 分别打开 `NetEaseApp only="netease|qq|bilibili"`，打开时 `setSource` 锁定来源，移除了 App 内的来源切换按钮。
 - 验证：tsc 0 错误；vitest 64 文件 / 451 测试全过；app 列表测试更新。
 - 待构建：preview10（含 Tauri signCommand 内嵌 exe 签名尝试）。
+
+## 2026-10-28 · 里程碑 13：拆 App 后的播放修复
+
+- 同步原版：`origin/main` 仍为 de6e887（v2.1.3），无新提交。
+- 修复：切换三个独立 App 时先暂停旧服务（`setSource` 发 pause），避免两个服务同时出声。
+- 校验：tsc 0 错误；vitest 64 文件 451 测试全过。
+- 剩余：QQ/B 站的卡车 3D 声场（需 cab 接线 + blob 音频）、内嵌 exe 签名、全量真机自测。

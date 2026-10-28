@@ -1343,3 +1343,30 @@
 .shell .bili-full-open {
   align-self: flex-start;
 }
+
+.bili-full-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  font-size: 15px;
+  pointer-events: auto;
+}
+
+.bili-full-bar {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.28);
+  overflow: hidden;
+}
+
+.bili-full-bar i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: #fb7299;
+}

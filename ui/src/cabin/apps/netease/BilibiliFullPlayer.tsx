@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useText } from '../../state/text'
 import { BilibiliVideoHole, useBilibiliVideo } from './bilibiliVideo'
 import { NextGlyph, PauseGlyph, PlayGlyph, PreviousGlyph } from './glyphs'
-import { playOrPause, skip, useNetease } from './netease'
+import { clock, playOrPause, positionOf, seek, skip, useNetease } from './netease'
 
 /**
  * Bilibili full screen: its video over the whole app, its controls over the picture (in the shell's video
@@ -13,7 +14,20 @@ export function BilibiliFullPlayer() {
   const text = useText()
   const playback = useNetease((state) => state.playback)
   const hole = useBilibiliVideo((state) => state.hole)
+  // The bar moves between the host's playback messages.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => tick((count) => count + 1), 250)
+    return () => clearInterval(timer)
+  }, [])
   if (!playback) return null
+  const position = positionOf(playback, performance.now())
+  const duration = playback.duration
+  const at = (event: { currentTarget: HTMLElement; clientX: number }) => {
+    const box = event.currentTarget.getBoundingClientRect()
+    const share = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width))
+    seek(share * duration)
+  }
   const words = text.netease
   const close = () => useBilibiliVideo.getState().setFullscreen(false)
   const layer = document.getElementById('video-over')
@@ -32,6 +46,13 @@ export function BilibiliFullPlayer() {
         </button>
         <span className="bili-full-title">{playback.track.name}</span>
         <span className="bili-full-by">{playback.track.artists.join(' / ')}</span>
+      </div>
+      <div className="bili-full-progress" onPointerDown={at}>
+        <span>{clock(position * 1000)}</span>
+        <span className="bili-full-bar">
+          <i style={{ width: `${duration > 0 ? Math.min(100, (position / duration) * 100) : 0}%` }} />
+        </span>
+        <span>{duration > 0 ? clock(duration * 1000) : ''}</span>
       </div>
       <div className="bili-full-controls">
         <button type="button" className="ne-round" aria-label={words.previous} onClick={() => skip(-1)}>

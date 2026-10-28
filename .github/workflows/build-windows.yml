@@ -74,12 +74,6 @@ jobs:
           # refusing to install; the app still uses the installed runtime.
           if (-not $base.bundle.windows) { $base.bundle.windows = @{} }
           $base.bundle.windows.webviewInstallMode = @{ type = "skip" }
-          # Tauri signs the app's binary before the installer embeds it (and the installers): signing it
-          # beforehand doesn't survive the bundler (a HashMismatch signature, preview 7).
-          $base.bundle.windows.signCommand = @{
-            cmd = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-            args = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path (Get-Location) 'tools/sign-windows.ps1'), '%1')
-          }
           # This fork must not take the upstream author's updates: installing 2.x would replace the
           # Chinese/NetEase build. No endpoints: the updater finds nothing and stays silent.
           if (-not $base.plugins) { $base.plugins = @{} }
@@ -113,23 +107,6 @@ jobs:
           ) -join "`n" | Set-Content src-tauri/installer/ci-hooks.nsh -Encoding utf8
           $base.bundle.windows.nsis.installerHooks = "installer/ci-hooks.nsh"
           $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
-
-      - name: Create the preview signing certificate
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path out | Out-Null
-          # The certificate made before the build (Tauri signed the app's binary with it).
-          $cert = Get-ChildItem Cert:\CurrentUser\My |
-            Where-Object { $_.Subject -eq 'CN=WestPlay CN Streaming Preview' } |
-            Select-Object -First 1
-          if (-not $cert) {
-            $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=WestPlay CN Streaming Preview' `
-              -FriendlyName 'WestPlay CN Streaming Preview' -CertStoreLocation Cert:\CurrentUser\My `
-              -NotAfter (Get-Date).AddYears(5) -HashAlgorithm SHA256
-          }
-          Export-Certificate -Cert $cert -FilePath out/WestPlay-Preview.cer | Out-Null
-          Write-Host "certificate thumbprint: $($cert.Thumbprint)"
 
       - name: Build app and NSIS installer
         run: npx tauri build --config src-tauri/tauri.ci.conf.json

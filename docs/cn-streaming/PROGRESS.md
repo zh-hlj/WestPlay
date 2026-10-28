@@ -104,3 +104,9 @@
 - UI：音乐 App 顶部来源三选一（网易云 / QQ音乐 / 哔哩哔哩）；companion 账号页加哔哩哔哩登录行；HostStatus/accounts/preview/strings（en/tr/zh）全接通。
 - 验证：tsc 0 错误；vitest 64 文件 / 451 测试全过；`cargo test -p westplay-host --lib bilibili::` 5/5；`cargo check -p westplay-app`（ASCII 副本）通过。
 - 下一步：CI 预览构建 preview5；真机验证。
+
+## 2026-10-28 · 里程碑 9：三源预览版 5
+
+- CI 构建 `v2.1.3-cn-preview5` 成功；SHA256 本地校验全部 match。
+- 便携包验证：host 含 bilibili/playurl/api.bilibili.com；cabin/companion UI 均含 bilibili；三源切换完整。
+- 待真机：网易云 3D 声场、QQ 登录/vkey、B站搜索/播放/收藏。

@@ -77,7 +77,7 @@ jobs:
           # Tauri signs the app's binary before the installer embeds it (and the installers): signing it
           # beforehand doesn't survive the bundler (a HashMismatch signature, preview 7).
           $base.bundle.windows.signCommand = @{
-            cmd = 'powershell'
+            cmd = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
             args = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path (Get-Location) 'tools/sign-windows.ps1'), '%1')
           }
           # This fork must not take the upstream author's updates: installing 2.x would replace the

@@ -125,3 +125,8 @@
 
 - **哔哩哔哩**：用你 PC 上 `webview2-bilibili` profile 无头验证：`nav.data.isLogin=true`、`mid` 存在、`x/v3/fav/folder/created/list-all` 返回 `code 0` 且有 **8 个收藏夹** → B 站登录/收藏夹链路可用。
 - **QQ**：微信登录态下 `fcg_get_profile_order_asset.fcg` 返回非 JSON/加密内容，歌单列表接口暂不可用（播放 vkey 亦 104003）；QQ 账号登录路径仍待真机。
+
+## 16. 正式版 v2.1.3-cn（2026-10-28）
+
+- 由 RC2 继续：修 QQ 歌单接口参数（按网页 profile 页的 ct/ein 请求）；网易云 CDN 直接捕获；B 站视频/全屏/清晰度/播放量；三服务独立 App；全链路签名。
+- 已知限制：QQ 微信登录不能播放（需 QQ 账号）；B 站视频合成/网易云 3D 待真机确认。

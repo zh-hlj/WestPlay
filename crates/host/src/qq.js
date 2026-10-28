@@ -42,7 +42,7 @@
   let accountAt = 0
   // The page's own cookies first: QQ's profile uin can be its encrypted form, and the vkey answer wants the digits.
   const uin = () =>
-    normalizeUin(cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || account.uin)
+    normalizeUin(cookie('uin') || cookie('qqmusic_uin') || cookie('wxuin') || cookie('p_uin') || account.uin)
   // Signed in: the profile said so, or the page's own uin cookie (qm_keyst may be HttpOnly: not read here).
   const signedIn = () => signed || Boolean(uin())
   const vip = () => {
@@ -383,7 +383,7 @@
       }
     }
     debug(
-      `vkey empty login=${signedIn() ? 'yes' : 'no'} uinLen=${uin().length} keyLen=${key.length} wechat=${key.startsWith('W_') ? 'yes' : 'no'} names=${(data.midurlinfo ?? []).map((one) => one?.result).join(',')} media=${media !== mid}`,
+      `vkey empty login=${signedIn() ? 'yes' : 'no'} uinLen=${uin().length} keyLen=${key.length} wechat=${key.startsWith('W_') ? 'yes' : 'no'} cookies=${['uin', 'wxuin', 'qlogin_uid', 'qm_keyst'].filter((name) => cookie(name)).join('|') || 'none'} names=${(data.midurlinfo ?? []).map((one) => one?.result).join(',')} media=${media !== mid}`,
     )
     return null
   }

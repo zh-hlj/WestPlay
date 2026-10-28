@@ -104,3 +104,9 @@
 - `vkey.GetVkeyServer` 对 `wxuin/euin/qlogin_uid` 各种 uin 与 `authst/ct/platform` 组合均返回 104003；即使宿主侧带完整 Cookie 请求也一样；
 - 尝试让 QQ 网页自己播放（免费歌曲页 + 点击播放）：页面没有可直接控制的 `<audio>/<video>` 元素（播放器走内部加密流），无法做轻量回退；
 - 结论：QQ 音乐**播放需 QQ 账号扫码登录**；微信登录可浏览/收藏但无法直链播放。companion 已在 QQ 行提示“播放需 QQ 账号”。
+
+## 12. B 站视频链路验证（2026-10-28，headless Edge）
+
+- 在 bilibili 页面内取 `player/playurl` DASH 视频地址（<=720P），用 `<video muted>` 播放：`paused:false`、`readyState:4`、`currentTime` 前进（匿名环境 480P；登录后可选 720/1080P）；
+- 音频走页面 fetch->Blob->cab_sound（实测 fetch 200、Blob 2.4MB、AudioContext 电平 0.0616）；
+- host `videoShow/videoHide/videoQuality` 与 Shell `#video-over` 开洞、Now Playing/全屏切换均已接线；真机仍需确认画面合成与音画同步。

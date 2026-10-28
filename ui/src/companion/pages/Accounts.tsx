@@ -9,6 +9,8 @@ import {
   type HostStatus,
   appleMusicSignIn,
   appleMusicSignOut,
+  neteaseSignIn,
+  neteaseSignOut,
   spotifySignIn,
   spotifySignOut,
   youtubeSignIn,
@@ -26,7 +28,7 @@ const SERVICES: Record<
     signIn(): Promise<void>
     signOut(): Promise<void>
     signingIn(status: HostStatus | null): boolean
-    /** Its words while signing in (YouTube's are the accounts' own). */
+    /** Its words while signing in (YouTube's and NetEase Cloud Music's are the accounts' own). */
     words(words: Words): { finishInWindow: string; signingIn: Note }
   }
 > = {
@@ -57,9 +59,18 @@ const SERVICES: Record<
     signingIn: (status) => status?.appleMusicSigningIn ?? false,
     words: (words) => words.appleMusic,
   },
+  netease: {
+    name: 'NetEase Cloud Music',
+    app: 'netease',
+    glow: GLOW.netease,
+    signIn: neteaseSignIn,
+    signOut: neteaseSignOut,
+    signingIn: (status) => status?.neteaseSigningIn ?? false,
+    words: (words) => words.accounts,
+  },
 }
 
-const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic']
+const ORDER: Service[] = ['youtube', 'spotify', 'appleMusic', 'netease']
 
 /**
  * The services WestPlay plays from, each signed in (in its own window, on the desktop) or not. WestPlay only

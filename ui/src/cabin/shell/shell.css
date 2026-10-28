@@ -73,8 +73,11 @@ body,
   -webkit-user-drag: none;
   -webkit-tap-highlight-color: transparent;
   /* Instrument Sans writes Latin only; Inter, close to it, gives Cyrillic and Greek (each loaded only
-     when a page uses it). Other scripts come from Windows' own fonts. */
-  font-family: 'Instrument Sans Variable', 'Inter Variable', sans-serif;
+     when a page uses it). Chinese comes from the system's own CJK fonts: Microsoft YaHei on Windows,
+     PingFang SC on macOS, Noto Sans SC (or Noto Sans CJK SC) elsewhere. */
+  font-family:
+    'Instrument Sans Variable', 'Inter Variable', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', 'Noto Sans CJK SC',
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

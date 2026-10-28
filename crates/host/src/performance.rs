@@ -44,6 +44,8 @@ pub enum Profile {
     Cab,
     Spotify,
     AppleMusic,
+    /// NetEase Cloud Music's own (`webview2-netease`, spotify.rs's and apple_music.rs's own as they are).
+    Netease,
 }
 
 /// What the host knows each second while the game runs.
@@ -244,6 +246,7 @@ fn parts_of(
             let part = match profile {
                 Profile::Spotify => "Spotify",
                 Profile::AppleMusic => "Apple Music",
+                Profile::Netease => "NetEase Cloud Music",
                 Profile::Cab => match kind {
                     COREWEBVIEW2_PROCESS_KIND_BROWSER => "browser",
                     COREWEBVIEW2_PROCESS_KIND_GPU => "GPU",

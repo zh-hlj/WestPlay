@@ -1,9 +1,9 @@
 import type { Language } from '../state/strings'
 
 /**
- * The keyboard's keys, as on the iPhone: English QWERTY and Turkish Q, each with the same number and symbol
- * layers. Letters are written lowercase; shift makes them capitals by their language's rules (Turkish i and
- * ı are İ and I).
+ * The keyboard's keys, as on the iPhone: English QWERTY, Turkish Q, and Chinese typed in Pinyin on the same
+ * English QWERTY (a Latin input method), each with the same number and symbol layers. Letters are written
+ * lowercase; shift makes them capitals by their language's rules (Turkish i and ı are İ and I).
  */
 
 /** Which set of keys shows. */
@@ -28,6 +28,8 @@ export type Key =
 const LETTERS: Record<Language, readonly string[]> = {
   en: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
   tr: ['qwertyuıopğü', 'asdfghjklşi', 'zxcvbnmöç'],
+  // Chinese is typed in Pinyin (or another Latin input method) on the English QWERTY.
+  zh: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
 }
 
 const NUMBERS = ['1234567890', '-/:;()€&@"', ".,?!'"]
@@ -51,12 +53,12 @@ export function keyRows(language: Language, layer: Layer): Key[][] {
   ]
 }
 
-/** A letter in capitals, by its language's rules. */
+/** A letter in capitals, by its language's rules (Chinese types Latin letters with English's). */
 export function capital(char: string, language: Language): string {
   return char.toLocaleUpperCase(language === 'tr' ? 'tr-TR' : 'en-GB')
 }
 
-/** The other language, for the globe key. */
+/** The other language, for the globe key: the two Latin layouts (Chinese types on the English QWERTY). */
 export function otherLanguage(language: Language): Language {
   return language === 'tr' ? 'en' : 'tr'
 }

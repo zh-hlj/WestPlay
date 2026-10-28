@@ -328,5 +328,7 @@ window.westplayCabSound = (media, say) => {
       } catch {}
     },
     level: cabLevel,
+    /** Its context's state (`running`, `suspended`…), for the page's debug log. */
+    state: () => audio?.context?.state ?? null,
   }
 }

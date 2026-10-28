@@ -17,6 +17,7 @@ const ROLES: AppIconRole[] = [
   'weather',
   'youtube',
   'youtubeMusic',
+  'netease',
 ]
 
 describe('appIcon', () => {

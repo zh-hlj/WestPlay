@@ -223,6 +223,13 @@ export type HostMessage =
   | ({ type: 'youtubeMusicAnswer'; id: number; failed?: boolean } & Partial<YouTubeMusicAnswers>)
   /** What YouTube Music plays; `null`: nothing. */
   | { type: 'youtubeMusicPlayback'; playback: YouTubeMusicPlayback | null }
+  /** NetEase Cloud Music's web player: whether it's signed in and playing (`null`: not running), and whether its
+   * sign-in window is open on the PC. Nothing else of the account. */
+  | { type: 'netease'; signedIn: boolean | null; playing: boolean | null; signingIn: boolean; vip?: string | null }
+  /** NetEase Cloud Music's answer to the app's question `id` (`failed`: it didn't answer). */
+  | ({ type: 'neteaseAnswer'; id: number; failed?: boolean } & Partial<NeteaseAnswers>)
+  /** What NetEase Cloud Music plays; `null`: nothing. */
+  | { type: 'neteasePlayback'; playback: NeteasePlayback | null }
 
 /** The game's weather: the one there is and the one it's turning to (the same once it has); in game minutes,
  * how long until the game changes it next; and how wet the roads are, percent. Each of the last two `null`
@@ -303,6 +310,8 @@ export type PageMessage =
   | { type: 'appleMusic'; command: AppleMusicCommand }
   /** A command for YouTube Music's web player (`westplay_host::youtube_music::Command`). */
   | { type: 'youtubeMusic'; command: YouTubeMusicCommand }
+  /** A command for NetEase Cloud Music's web player (`westplay_host::netease::Command`). */
+  | { type: 'netease'; command: NeteaseCommand }
 
 /** What the Spotify app asks of Spotify's web player (`westplay_host::spotify::Command`), run hidden by the
  * host: its sign-in, a question (answered with `spotifyAnswer` and the same `id`), and the player's controls
@@ -833,6 +842,121 @@ export interface YouTubeMusicPlayback {
   index: number
   from: string
   ad: boolean
+}
+
+/** What the NetEase Cloud Music app asks of NetEase Cloud Music's web player (`westplay_host::netease::Command`),
+ * run hidden by the host: its sign-in (a QR code in a window on the PC: the host opens it), a question (answered
+ * with `neteaseAnswer` and the same `id`), and the player's controls (`play` with a song, from a playlist, plays
+ * it; without either, it plays on). */
+export type NeteaseCommand =
+  | { action: 'start' }
+  | { action: 'signIn' }
+  | { action: 'signOut' }
+  | { action: 'ask'; id: number; question: NeteaseQuestion }
+  | { action: 'play'; song?: string; playlist?: string }
+  | { action: 'pause' }
+  /** Play on, from where it was paused. */
+  | { action: 'resume' }
+  | { action: 'next' }
+  | { action: 'previous' }
+  | { action: 'seek'; seconds: number }
+  /** The page player's volume, 0 to 100. */
+  | { action: 'volume'; percent: number }
+  | { action: 'shuffle'; on: boolean }
+  | { action: 'repeat'; mode: NeteaseRepeat }
+
+export type NeteaseRepeat = 'off' | 'all' | 'one'
+
+/** What a card or a row is: a song, a playlist, an album, an artist (or a radio). */
+export type NeteaseKind = 'song' | 'playlist' | 'album' | 'artist' | 'radio'
+
+/** A card or a row: what it is, its name, who it's by, its cover, and a line about it (`null`: none). */
+export interface NeteaseItem {
+  id: string
+  kind: NeteaseKind
+  name: string
+  by: string
+  image?: string | null
+  description?: string | null
+}
+
+/** A song: its id, its name, its artists' names and album, its cover, and its length in milliseconds (as
+ * NetEase's own API gives it). */
+export interface NeteaseTrack {
+  id: string
+  name: string
+  /** The artists' names: NetEase's own API gives the names, the app doesn't need their ids. */
+  artists: string[]
+  album: string
+  image?: string | null
+  durationMs: number
+  /** In the account's own lists (Liked Songs, a saved playlist), as the page's API says. */
+  saved?: boolean
+}
+
+/** A shelf of Home: its title, and its cards. */
+export interface NeteaseSection {
+  title: string
+  items: NeteaseItem[]
+}
+
+/** Home: NetEase Cloud Music's own recommendation shelves. */
+export interface NeteaseHome {
+  sections: NeteaseSection[]
+}
+
+/** A search's results. */
+export interface NeteaseResults {
+  songs: NeteaseTrack[]
+  playlists: NeteaseItem[]
+  albums: NeteaseItem[]
+  artists: NeteaseItem[]
+}
+
+/** A playlist's or an album's page: what it is, and its songs. */
+export interface NeteaseCollection {
+  item: NeteaseItem
+  tracks: NeteaseTrack[]
+}
+
+/** What the NetEase Cloud Music app asks: Home, a search, a song's words (its id), a playlist's or an album's
+ * page (its id: NetEase's own API doesn't say which, its page tries a playlist and then an album). */
+export type NeteaseQuestion =
+  | { ask: 'home' }
+  | { ask: 'library' }
+  | { ask: 'search'; query: string }
+  | { ask: 'lyrics'; song: string }
+  | { ask: 'collection'; id: string }
+
+export interface NeteaseAnswers {
+  home: NeteaseHome
+  library: NeteaseHome
+  search: NeteaseResults
+  collection: NeteaseCollection
+  lyrics: Lyrics
+}
+
+/** Where a song plays from: a playlist's or an album's id, its name if the page said one, and what it is. */
+export interface NeteaseContext {
+  id: string
+  name: string
+  kind: NeteaseKind
+}
+
+/** What NetEase Cloud Music plays: the song, where from, how far in (milliseconds, as the page's player has it),
+ * the options, the volume, and the songs to come (the page's own queue isn't known yet: `next` is empty for
+ * now, TODO(verify)). */
+export interface NeteasePlayback {
+  track: NeteaseTrack | null
+  context: NeteaseContext | null
+  playing: boolean
+  positionMs: number
+  durationMs: number
+  /** The page player's volume, 0 to 1 (`null`: none it can set). */
+  volume: number | null
+  shuffle: boolean
+  repeat: NeteaseRepeat
+  next: NeteaseTrack[]
 }
 
 /** What the YouTube app asks of YouTube's player (hidden, under the page) or of YouTube (`westplay_host::

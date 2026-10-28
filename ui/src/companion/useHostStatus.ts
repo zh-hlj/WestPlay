@@ -30,6 +30,9 @@ export interface HostStatus {
   /** The same of Apple Music: signed in or not (`null`: not known yet), and Apple's sign-in window open. */
   appleMusicSignedIn: boolean | null
   appleMusicSigningIn: boolean
+  /** The same of NetEase Cloud Music: signed in or not (`null`: not known yet), and its sign-in window open. */
+  neteaseSignedIn: boolean | null
+  neteaseSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -129,6 +132,21 @@ export function appleMusicSignIn(): Promise<void> {
 /** Signs Apple Music out. */
 export function appleMusicSignOut(): Promise<void> {
   return call('apple_music_sign_out')
+}
+
+/** Opens NetEase Cloud Music's sign-in in a window on the desktop (a QR code, scanned by its phone app). */
+export function neteaseSignIn(): Promise<void> {
+  return call('netease_sign_in')
+}
+
+/** Signs NetEase Cloud Music out. */
+export function neteaseSignOut(): Promise<void> {
+  return call('netease_sign_out')
+}
+
+/** Runs NetEase Cloud Music's web player (hidden), so the status says whether it's signed in. */
+export function neteaseCheck(): Promise<void> {
+  return call('netease_check')
 }
 
 /** Opens the support page (Kreosus) in the player's browser. */

@@ -668,7 +668,8 @@ function LibraryShelfPage({
       shelf,
       ...(look.sort ? { sort: look.sort } : {}),
       ...(folder ? { folder: folder.id } : {}),
-      language,
+      // Apple Music names the sorts in English or Turkish: Chinese asks it for English.
+      language: language === 'tr' ? 'tr' : 'en',
     },
     useShownAgain(shown),
   )

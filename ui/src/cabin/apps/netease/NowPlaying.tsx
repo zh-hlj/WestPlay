@@ -206,7 +206,7 @@ export function NowPlaying() {
   const track = playback.track
   const close = () => useNetease.setState({ nowPlaying: false, lyrics: false })
   return (
-    <div className="ne-now" role="dialog" aria-label={words.nowPlaying}>
+    <div className={`ne-now${source === 'bilibili' ? ' bili' : ''}`} role="dialog" aria-label={words.nowPlaying}>
       <header className="ne-now-top">
         <button type="button" className="ne-round" aria-label={words.close} onClick={close}>
           <ChevronDownGlyph size={34} />

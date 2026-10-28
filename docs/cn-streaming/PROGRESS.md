@@ -167,3 +167,9 @@
 - UI：`bilibiliVideo.tsx` 的 `BilibiliVideoHole` 测量 NowPlaying 封面区域，通知 host 放置并在 Shell 的 hole mask 上开洞；NowPlaying 在 B 站源时用视频洞替代封面。
 - 校验：tsc 0；vitest 451 passed；npm build 通过；host 212 passed / 0 failed；node --check 通过。
 - 待构建 preview14 与真机验证（视频是否显示、同步、B 站 anti-leech）。
+
+## 2026-10-28 · 里程碑 18：B 站 Now Playing 视频放大为 16:9（preview15）
+
+- NowPlaying 在 B 站源时改为纵向布局：视频区域 16:9、约占主体 62% 高度，歌名/进度/控制/音量在下方；本机 demo 注入播放态截图验证（视频 803×452，控制区 261px 可见）。
+- 校验：tsc 0；vitest 451；npm build 通过。
+- preview15 构建中。

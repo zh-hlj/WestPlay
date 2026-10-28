@@ -1242,3 +1242,37 @@
   background: transparent;
   box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
 }
+
+/* Bilibili: its video is the app's main thing. In Now Playing it fills the width (16:9), the words and the
+   controls under it, rather than a square cover beside them. */
+.shell .ne-now.bili .ne-now-main {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.shell .ne-now.bili .ne-now-art {
+  align-self: center;
+  height: 62%;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  flex: none;
+}
+
+.shell .ne-now.bili .ne-now-song {
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.shell .ne-now.bili .ne-now-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.shell .ne-now.bili .ne-now-next {
+  flex: none;
+}

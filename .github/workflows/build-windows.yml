@@ -1,0 +1,214 @@
+﻿name: build-windows
+
+# Builds the WestPlay fork on a real Windows/MSVC runner (no local toolchain needed) and
+# produces: (1) an NSIS installer, (2) a portable zip. Manual runs also attach both to the
+# preview release, so they can be downloaded from the Releases page.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - name: Install JS dependencies
+        run: npm install
+
+      - name: Build game plugin (westplay.dll)
+        run: cargo build --release -p westplay-plugin
+
+      - name: Prepare Tauri app dir and CI config
+        shell: pwsh
+        run: |
+          # The repository keeps the Tauri app in `app/`, but the Tauri CLI and Cargo both expect the
+          # app crate to be a workspace member under `src-tauri`. Copy it there and point the workspace
+          # at the copy (same depth, so the config's relative paths still resolve).
+          if (Test-Path src-tauri) { Remove-Item src-tauri -Recurse -Force }
+          Copy-Item app src-tauri -Recurse
+          $cargoToml = Get-Content Cargo.toml -Raw
+          $cargoToml = $cargoToml.Replace('"app",', '"src-tauri",')
+          Set-Content Cargo.toml $cargoToml -Encoding utf8
+          Select-String -Path Cargo.toml -Pattern "members" | Select-Object -First 1
+          $base = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json -AsHashtable
+          $rel  = Get-Content src-tauri/tauri.release.conf.json -Raw | ConvertFrom-Json -AsHashtable
+          function Merge($a, $b) {
+            foreach ($k in $b.Keys) {
+              if ($a[$k] -is [System.Collections.IDictionary] -and $b[$k] -is [System.Collections.IDictionary]) {
+                Merge $a[$k] $b[$k]
+              } else {
+                $a[$k] = $b[$k]
+              }
+            }
+          }
+          Merge $base $rel
+          $base.bundle.active = $true
+          $base.bundle.targets = @("nsis")
+          # No updater signing key on CI: skip updater artifacts (the installer itself is still made).
+          $base.bundle.createUpdaterArtifacts = $false
+          # Tauri's NSIS WebView2 check reports false negatives on machines that do have the runtime
+          # (this one: WebView2 155.x present, registry under WOW6432Node). Skip the check instead of
+          # refusing to install; the app still uses the installed runtime.
+          if (-not $base.bundle.windows) { $base.bundle.windows = @{} }
+          $base.bundle.windows.webviewInstallMode = @{ type = "skip" }
+          # This fork must not take the upstream author's updates: installing 2.x would replace the
+          # Chinese/NetEase build. No endpoints: the updater finds nothing and stays silent.
+          if (-not $base.plugins) { $base.plugins = @{} }
+          if (-not $base.plugins.updater) { $base.plugins.updater = @{} }
+          $base.plugins.updater.endpoints = @()
+          # Upstream's PREINSTALL hook probes WebView2 itself and false-negatives on some PCs that do have
+          # the runtime (this one: 155.x present, MSI/registry fine). Replace it with our own hook:
+          # webviewInstallMode skip above means no probe, and the hook stops a running WestPlay and removes
+          # (or renames) a locked old westplay.exe before the installer writes — the "cannot open the file to
+          # write" failure over an existing C:\gameDATE\WestPlay. If the old file can't be cleared, install to
+          # the user's own folder instead of failing.
+          New-Item -ItemType Directory -Force -Path src-tauri/installer | Out-Null
+          @(
+            '; WestPlay (Chinese/NetEase fork): install over an existing build.',
+            '; webviewInstallMode is "skip": the upstream WebView2 probe false-negatives on some PCs, so it is',
+            '; not run. A running app or a locked old westplay.exe used to make the installer fail to write',
+            '; over it; stopped and cleared here, and a folder still not writable becomes the user''s own folder.',
+            '!macro NSIS_HOOK_PREINSTALL',
+            '  ExecWait ''"$SYSDIR\\taskkill.exe" /F /T /IM westplay.exe''',
+            '  Sleep 700',
+            '  CreateDirectory "$INSTDIR"',
+            '  SetFileAttributes "$INSTDIR\westplay.exe" NORMAL',
+            '  Delete "$INSTDIR\westplay.exe"',
+            '  Rename "$INSTDIR\westplay.exe" "$INSTDIR\westplay.exe.old"',
+            '  IfFileExists "$INSTDIR\westplay.exe" 0 done',
+            '  StrCpy $INSTDIR "$LOCALAPPDATA\WestPlay"',
+            '  CreateDirectory "$INSTDIR"',
+            '  MessageBox MB_OK "The old folder could not be written; WestPlay will be installed to: $INSTDIR"',
+            '  done:',
+            '!macroend'
+          ) -join "`n" | Set-Content src-tauri/installer/ci-hooks.nsh -Encoding utf8
+          $base.bundle.windows.nsis.installerHooks = "installer/ci-hooks.nsh"
+          $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
+
+      - name: Build app and NSIS installer
+        run: npx tauri build --config src-tauri/tauri.ci.conf.json
+
+      - name: Assemble portable zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/portable/ui | Out-Null
+          Copy-Item target/release/westplay.exe out/portable/
+          if (Test-Path target/release/westplay.dll) { Copy-Item target/release/westplay.dll out/portable/ }
+          if (Test-Path target/release/WebView2Loader.dll) { Copy-Item target/release/WebView2Loader.dll out/portable/ }
+          Copy-Item ui/dist/* out/portable/ui/ -Recurse -Force
+          Copy-Item LICENSE out/portable/LICENSE.txt
+          Copy-Item THIRD_PARTY_LICENSES.md, THIRD_PARTY_NOTICES.md out/portable/
+          @"
+          WestPlay v2.1.3 中文 + 实验性网易云音乐（GitHub Actions / MSVC 构建）
+          =====================================================================
+          覆盖安装：先退出正在运行的 WestPlay，然后运行新的 setup.exe，安装目录选原来那个
+          （例如 C:\gameDATE\WestPlay）即可直接覆盖；或把本 zip 解压覆盖到原安装目录。
+          双击 westplay.exe 运行。若提示 WebView2 0x800700AA（请求的资源在使用中），
+          请先从系统托盘完全退出官方 WestPlay、结束残留的 msedgewebview2.exe，或重启电脑后再试；
+          也可双击「启动(避让占用).bat」，它会为 WebView2 使用包内独立数据目录。
+          本版本已关闭上游更新源，不会再提示安装原作者的官方更新。
+          构建时间：$(Get-Date -Format o)  提交：${{ github.sha }}
+          游戏内安装（ETS2 插件 westplay.dll）与网易云登录/播放需真机验证。
+          源码：${{ github.server_url }}/${{ github.repository }}/tree/${{ github.ref_name }}  许可：GPL-3.0-or-later
+          "@ | Set-Content out/portable/README-使用说明.txt -Encoding UTF8
+          @"
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "%~dp0webview2-data" mkdir "%~dp0webview2-data"
+          set WEBVIEW2_USER_DATA_FOLDER=%~dp0webview2-data
+          start "" "%~dp0westplay.exe"
+          endlocal
+          "@ | Set-Content -LiteralPath "out/portable/启动(避让占用).bat" -Encoding utf8
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview-portable.zip -Force
+
+      - name: Collect build outputs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/installer | Out-Null
+          Get-ChildItem target/release/bundle/nsis -Filter *.exe -ErrorAction SilentlyContinue |
+            Copy-Item -Destination out/installer/
+          Get-ChildItem out/installer | Select-Object Name, Length
+          Get-ChildItem target/release/bundle -Recurse -Filter *.exe -ErrorAction SilentlyContinue | Select-Object FullName
+
+      - name: Sign with the preview's self-signed certificate, add the trust helper
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=WestPlay CN Streaming Preview' `
+            -FriendlyName 'WestPlay CN Streaming Preview' -CertStoreLocation Cert:\CurrentUser\My `
+            -NotAfter (Get-Date).AddYears(5) -HashAlgorithm SHA256
+          Export-Certificate -Cert $cert -FilePath out/WestPlay-Preview.cer | Out-Null
+          $targets = @(Get-Item out/portable/westplay.exe) + @(Get-ChildItem out/installer/*.exe)
+          foreach ($file in $targets) {
+            $sig = Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256
+            Write-Host "signed $($file.Name): $($sig.Status)"
+          }
+          # Self-signed (no paid certificate): Windows still calls the publisher unknown until this preview
+          # certificate is trusted. The helper adds it to this user's Root/TrustedPublisher stores. Each build
+          # makes a new certificate, so run it again after an update.
+          Copy-Item out/WestPlay-Preview.cer out/portable/
+          @"
+          @echo off
+          certutil -user -addstore -f Root "%~dp0WestPlay-Preview.cer"
+          certutil -user -addstore -f TrustedPublisher "%~dp0WestPlay-Preview.cer"
+          echo Done. Run setup.exe (or westplay.exe) again.
+          pause
+          "@ | Set-Content -LiteralPath "out/portable/信任证书.bat" -Encoding utf8
+          Copy-Item out/portable/WestPlay-Preview.cer out/
+          Copy-Item -LiteralPath "out/portable/信任证书.bat" out/ -Force
+          Copy-Item -LiteralPath "out/portable/信任证书.bat" out/Trust-Certificate.bat -Force
+          Remove-Item out/WestPlay-2.1.3-cn-preview-portable.zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview-portable.zip -Force
+          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.3-cn-preview-portable.zip -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content out/SHA256SUMS.txt -Encoding ascii
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: westplay-windows-msvc
+          path: |
+            out/installer/*.exe
+            out/WestPlay-2.1.3-cn-preview-portable.zip
+            out/WestPlay-Preview.cer
+            out/Trust-Certificate.bat
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Attach to the preview release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.1.3-cn-preview1
+          target_commitish: ${{ github.ref_name }}
+          prerelease: true
+          fail_on_unmatched_files: false
+          overwrite_files: true
+          files: |
+            out/installer/*.exe
+            out/WestPlay-2.1.3-cn-preview-portable.zip
+            out/WestPlay-Preview.cer
+            out/Trust-Certificate.bat
+            out/SHA256SUMS.txt

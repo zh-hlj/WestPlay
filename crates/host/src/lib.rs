@@ -20,6 +20,7 @@ mod lyrics;
 pub mod maps;
 mod netease;
 mod qq;
+mod bilibili;
 mod performance;
 mod planner;
 mod play_log;

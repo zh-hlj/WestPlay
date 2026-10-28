@@ -120,6 +120,17 @@ pub const QQMUSIC: Site = Site {
     not_yet: None,
     page_says: Some(include_str!("qq_sign_in.js")),
 };
+
+/// Bilibili's sign-in: its own web player, where signing in is a dialog of the page (a QR code, scanned with the
+/// Bilibili app), so its address stays its home and the page's own script says when it's done
+/// (`bilibili_sign_in.js`, `page_says`).
+pub const BILIBILI: Site = Site {
+    sign_in: "https://www.bilibili.com/",
+    title: "Sign in to Bilibili - WestPlay",
+    home: "https://www.bilibili.com/",
+    not_yet: None,
+    page_says: Some(include_str!("bilibili_sign_in.js")),
+};
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).

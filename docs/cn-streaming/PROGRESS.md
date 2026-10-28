@@ -90,3 +90,10 @@
 - Web Audio 捕获电平 0（CDN 无 ACAO）→ B 站 v1 只做直出，无卡车 3D 声场。
 - 设计文档：`docs/cn-streaming/BILIBILI.md`（架构/接口/风险/步骤）。
 - 下一步：`bilibili.js` + `bilibili.rs` + host/UI 第三来源接线。
+
+## 2026-10-28 · 里程碑 7：哔哩哔哩 host 核心
+
+- 新增 `crates/host/src/bilibili.js`（搜索/wbi search、热门首页、视频详情、playurl DASH 音频、我的收藏夹、自有 `<audio>` 播放、列表循环/随机/下一首、与 host 消息协议）。
+- 新增 `crates/host/src/bilibili.rs`（服务/命令/问题/报告/登录窗口；复用 `netease.rs` 数据形状）；`signin.rs` 加 `BILIBILI` Site + `bilibili_sign_in.js`（扫码检测）。
+- 验证：`cargo test -p westplay-host --lib bilibili::` 5/5；`node --check bilibili.js`/`bilibili_sign_in.js` 通过。
+- 下一步：lib 接线（第三服务）、app 命令、UI 第三来源（网易云/QQ/哔哩哔哩）、companion 登录行；然后 tsc/vitest/cargo check + 预览构建。

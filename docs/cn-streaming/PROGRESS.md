@@ -76,3 +76,10 @@
 - `qq.js`：账号从 QQ 资料接口读取（uin/nick/头像/VIP），不再依赖读取 httpOnly cookie；vkey 失败写 `[qq] debug:`；`qq.rs` 转发该日志。
 - CI 构建 `v2.1.3-cn-preview3` 成功；本地 SHA256 校验通过。
 - 待真机：QQ 扫码登录 → 切源 → 搜索/播放/列表；失败时取 `[qq]` 日志继续修。
+
+## 2026-10-28 · 里程碑 5：网易云卡车 3D 声场（preview4）
+
+- 实测 NetEase 音频 CDN（http/https）返回 `Access-Control-Allow-Origin: *`；headless Edge 验证 media element + CORS + Web Audio 捕获后电平 > 0。
+- `netease.js`：直接播放的 URL 先探测 CORS，允许时给 `<audio>` 加 `crossOrigin=anonymous` 并交给 `cab_sound`（卡车喇叭/HRTF/EQ/车外闷音/频谱）；不允许时保持直出。
+- CI 构建 `v2.1.3-cn-preview4` 成功；本地 SHA256 校验全部 match。
+- 待真机：车内声场/EQ/频谱效果；QQ 登录/vkey 仍未真机验证。

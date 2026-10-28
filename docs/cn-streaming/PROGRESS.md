@@ -63,3 +63,10 @@
 - 中文字典 en/tr/zh 加 `sources`（网易云 / QQ Music）。
 - 验证：`tsc -b` 0 错误；`vitest` 64 文件 / 451 测试全过。
 - 下一步：CI 构建 QQ 预览版（含签名/安装器修复），真机验证登录/vkey/播放。
+
+## 2026-10-28 · 里程碑 4：QQ 音乐预览构建（preview2）
+
+- CI 构建成功：`v2.1.3-cn-preview2` 安装包 + 便携包（MSVC、自签名、安装器写入修复）。
+- 便携包验证：`westplay.exe` 2.1.3 已签名；host 含 `y.qq.com`/`GetVkey`/`musicu.fcg`/`disable-web-security`；cabin UI 含 QQ 源；companion 含 `qqSignedIn`/`qq_sign_in`。
+- 待真机验证：QQ 扫码登录、登录后 vkey 播放、歌单/我的歌单、列表连续播放。
+- 下一步：根据真机结果修 QQ 登录/cookie；之后哔哩哔哩、3D 音效。

@@ -617,17 +617,16 @@
   // capture it (CORS), asked once per host. NetEase's own CDNs do; another may not, and then the sound stays the
   // page's own (direct output, no cab's 3D sound).
   const captureHosts = new Map()
+  // Hosts whose sound the truck's speakers cannot take (its CORS refused): direct output, no 3D sound.
+  const noCaptureHosts = new Set()
   let saidCapture = ''
   const canCapture = async (url) => {
     try {
       const origin = new URL(url).origin
       const host = new URL(url).hostname
-      // NetEase's own CDNs answer `Access-Control-Allow-Origin: *` (measured 2026-10-28): no probe needed, and a
-      // HEAD this player's WebView2 refuses for its own reasons must not take the truck's speakers away.
-      if (/(^|\.)music\.126\.net$|(^|\.)music\.163\.com$/.test(host)) {
-        captureHosts.set(origin, true)
-        return true
-      }
+      // This CDN has already proved it can't be captured (the pictureless audio played but its Web Audio was
+      // silent, or its CORS fetch failed): its later songs stay the page's own sound.
+      if (noCaptureHosts.has(host)) return false
       // Kept when it works; a failure is asked again next time (a CDN's first answer may be a transient one),
       // never cached, so one bad HEAD doesn't take the truck's speakers from every later song.
       if (captureHosts.get(origin) === true) return true
@@ -651,6 +650,53 @@
     } catch {
       return false
     }
+  }
+  // The element a song's sound comes from when the truck's speakers can't take it: the page's own output, no
+  // Web Audio (so no 3D sound), but it plays. The captured element is thrown away (an element is taken into a
+  // Web Audio graph once, and stays there).
+  const fallBackToDirect = () => {
+    if (!directCors || !directTrack || !directElement) return false
+    const url = directElement.src
+    const at = directElement.currentTime
+    const volume = directElement.volume
+    let host = ''
+    try {
+      host = new URL(url).hostname
+    } catch {
+      // Its address as it is.
+    }
+    if (host) noCaptureHosts.add(host)
+    captureHosts.clear()
+    directElement.pause()
+    directElement.remove()
+    directElement = document.createElement('audio')
+    directElement.preload = 'auto'
+    document.documentElement.appendChild(directElement)
+    for (const name of ['play', 'pause', 'seeked', 'loadedmetadata', 'timeupdate'])
+      directElement.addEventListener(name, () => tellPlayback())
+    directElement.addEventListener('play', () => {
+      tellPlayback()
+      tellState(true)
+    })
+    directElement.addEventListener('pause', () => {
+      tellPlayback()
+      tellState(true)
+    })
+    directElement.addEventListener('ended', () => {
+      void directEnded()
+    })
+    directElement.volume = volume
+    directElement.src = url
+    try {
+      directElement.currentTime = at
+    } catch {
+      // Before its metadata: from its start.
+    }
+    directCors = false
+    directElement.play().catch(() => {})
+    debug(`3D off: ${host || 'its CDN'} refuses capture, the page's own sound instead`)
+    tellPlayback()
+    return true
   }
   const directSong = async (song, playlist) => {
     const url = await directUrl(song)
@@ -894,6 +940,14 @@
     const levels = cab?.level()
     const heard = Array.isArray(levels) && levels.slice(0, 2).some((ear) => ear > 0.0005)
     quietSince = isPlaying && levels && !heard ? (quietSince ?? Date.now()) : null
+    // A captured element that is playing but silent (its CDN refused the pictureless sound's own CORS once
+    // taken into the Web Audio graph): the page's own output, at once, rather than silence.
+    if (directCors && isPlaying && levels && !heard && quietSince && Date.now() - quietSince > 2500) {
+      if (fallBackToDirect()) {
+        quietSince = null
+        return
+      }
+    }
     if (quietSince && Date.now() - quietSince > 4000) {
       debug('silent')
       if (KNOWN.size > 1 && Date.now() - quietSince > 8000) {

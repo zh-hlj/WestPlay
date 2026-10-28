@@ -146,3 +146,10 @@
 - lib.rs：QQ/B站 Spectrum 转发到车内 Equalizer；cab 循环给两个服务发卡车喇叭/头部/车外 EQ。
 - 验证：node --check 两脚本；cargo test -p westplay-host --lib 212 passed / 0 failed；cargo check 通过。
 - 待构建 preview11，真机验证 blob 起播延迟与 3D 效果。
+
+## 2026-10-28 · 里程碑 15：内嵌 exe 签名完成（preview12）
+
+- 采用 Tauri `bundle.windows.certificateThumbprint` + `digestAlgorithm=sha256`：Tauri 在打包时用 signtool 签 app 与安装包。
+- 本地验证：便携 exe、安装包内嵌 exe、安装包本身三者签名均为 `CN=WestPlay CN Streaming Preview`（valid self-signed）。
+- QQ/B 站 Blob 缓存 3 首上限 + revoke；B 站 Blob + Web Audio 本机 headless 实测电平 0.0616。
+- CI 成功；SHA256 全 match。

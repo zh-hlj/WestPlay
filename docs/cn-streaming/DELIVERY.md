@@ -49,11 +49,12 @@
 - [ ] 音量键/滑条对三个服务生效
 - [ ] 切换 App 不双播放
 - [ ] 覆盖安装原目录成功（无“无法写入”）
+- [ ] 安装后的 `westplay.exe` 属性显示有效签名（信任证书后）
 - [ ] YouTube / Apple Music / Spotify 回归
 
 ## 6. 已知问题 / 风险
 
-- **安装后的 westplay.exe 仍未签名**：Tauri `signCommand` 在 CI 无法启动、提前签名被 bundler 破坏（HashMismatch）；当前安装包/便携 exe 已签名。`certificateThumbprint` 方案在尝试中。
+- 签名已解决（preview12 起）：Tauri `bundle.windows.certificateThumbprint` + 自签名证书，便携 exe、安装包、安装包内嵌 exe 均已签名；首次使用需运行 `Trust-Certificate.bat` 信任当次证书。
 - QQ/B 站 Blob 方式**整首下载后起播**（大 FLAC 延迟/内存）；B 站 mcdn 可能 anti-leech，失败回退原 URL 直出（有声音、无 3D）。
 - B 站 v1 只播音频，不显示视频画面。
 - QQ vkey/登录、B 站登录/收藏仍待真机确认；代码内已加 `[qq] debug:` / `[bilibili] debug:` 日志。

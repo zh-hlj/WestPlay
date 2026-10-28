@@ -120,3 +120,8 @@
 ## 14. RC2（2026-10-28）
 
 - 网易云 3D：对 `*.music.126.net` / `*.music.163.com` 直接视为可捕获（CDN 已实测 `Access-Control-Allow-Origin: *`），不再依赖可能被 WebView2 HEAD 拒绝的探测；其余保留“成功才缓存、失败重试”。
+
+## 15. 账号链路验证（用真机 WebView2 profile，2026-10-28）
+
+- **哔哩哔哩**：用你 PC 上 `webview2-bilibili` profile 无头验证：`nav.data.isLogin=true`、`mid` 存在、`x/v3/fav/folder/created/list-all` 返回 `code 0` 且有 **8 个收藏夹** → B 站登录/收藏夹链路可用。
+- **QQ**：微信登录态下 `fcg_get_profile_order_asset.fcg` 返回非 JSON/加密内容，歌单列表接口暂不可用（播放 vkey 亦 104003）；QQ 账号登录路径仍待真机。

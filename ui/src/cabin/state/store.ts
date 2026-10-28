@@ -77,6 +77,8 @@ interface CabinState {
   dashboardWidgets: Record<DashboardWidget, boolean>
   /** Album art on Now Playing and in Music (Settings, Now Playing): off, a plain note instead. */
   albumArt: boolean
+  /** The current lyric line on Home and the Dashboard (Settings, Now Playing): off, the screens are as they were. */
+  showLyrics: boolean
   /** The apps' text size, a step of `TEXT_SIZES` (Settings › Appearance › Text Size). */
   textSize: number
   /** The truck's own strip: kept (`auto`) or not, as set in the companion window (the host sends it). */
@@ -96,6 +98,7 @@ interface CabinState {
   setWallpaper(id: string): void
   setDashboardWidget(widget: DashboardWidget, shown: boolean): void
   setAlbumArt(shown: boolean): void
+  setShowLyrics(shown: boolean): void
   setTextSize(step: number): void
   /** One band of the curve, set in Settings › Equalizer (choosing Custom): played by every player, and kept with
    * WestPlay's settings. */
@@ -114,7 +117,7 @@ interface CabinState {
 /** What survives a restart of the app: where you were and your choices, never the power state. */
 type Persisted = Pick<
   CabinState,
-  'navigation' | 'appearanceMode' | 'wallpaperId' | 'dashboardWidgets' | 'albumArt' | 'textSize'
+  'navigation' | 'appearanceMode' | 'wallpaperId' | 'dashboardWidgets' | 'albumArt' | 'showLyrics' | 'textSize'
 >
 
 const ALL_WIDGETS: Record<DashboardWidget, boolean> = { nowPlaying: true, destination: true, weather: true }
@@ -127,6 +130,7 @@ export const useCabin = create<CabinState>()(
       wallpaperId: DEFAULT_WALLPAPER_ID,
       dashboardWidgets: ALL_WIDGETS,
       albumArt: true,
+      showLyrics: true,
       textSize: DEFAULT_TEXT_SIZE,
       oemMode: 'auto',
       equalizer: FLAT,
@@ -142,6 +146,7 @@ export const useCabin = create<CabinState>()(
       setDashboardWidget: (widget, shown) =>
         set((state) => ({ dashboardWidgets: { ...state.dashboardWidgets, [widget]: shown } })),
       setAlbumArt: (albumArt) => set({ albumArt }),
+      setShowLyrics: (showLyrics) => set({ showLyrics }),
       setTextSize: (step) => set({ textSize: toTextSize(step) }),
       setEqualizerBand: (band, db) => {
         const equalizer = toEqualizer({ ...useCabin.getState().equalizer, [band]: db })
@@ -191,6 +196,7 @@ export const useCabin = create<CabinState>()(
         wallpaperId: state.wallpaperId,
         dashboardWidgets: state.dashboardWidgets,
         albumArt: state.albumArt,
+        showLyrics: state.showLyrics,
         textSize: state.textSize,
       }),
       // Stored data comes from an earlier version of WestPlay (or was edited): keep only what is valid.
@@ -223,6 +229,7 @@ function sanitize(stored: Partial<Persisted> | undefined): Partial<Persisted> {
     ) as Record<DashboardWidget, boolean>
   }
   if (typeof stored.albumArt === 'boolean') result.albumArt = stored.albumArt
+  if (typeof stored.showLyrics === 'boolean') result.showLyrics = stored.showLyrics
   if (stored.textSize !== undefined) result.textSize = toTextSize(stored.textSize)
   return result
 }

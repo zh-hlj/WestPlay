@@ -2,6 +2,7 @@ import { GuidanceCard } from '../maps/GuidanceCard'
 import { MapView } from './MapView'
 import { useAnyWidget } from './widgetState'
 import { DestinationWidget, NowPlayingWidget, WeatherWidget } from './widgets'
+import { LyricsBar } from '../home/LyricsBar'
 import './dashboard.css'
 
 /**
@@ -21,6 +22,7 @@ export function Dashboard() {
         <DestinationWidget />
         <WeatherWidget />
       </div>
+      <LyricsBar />
     </section>
   )
 }

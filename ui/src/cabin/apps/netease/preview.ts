@@ -171,18 +171,19 @@ function collection(id: string): NeteaseCollection {
 }
 
 function lyrics(): NeteaseAnswers['lyrics'] {
-  // TODO(verify): NetEase's own timed words (`/api/song/lyric`): the preview's are not synced, one line each.
+  // The demo's own timed words: the same song the preview plays, a line each few seconds.
+  const lines = [
+    '车灯照着前面的雨',
+    '收音机开得很低',
+    '再过一个收费站',
+    '就快到家了',
+    '夜行高速，一直往南',
+    '把这座城留在身后',
+    '车灯消失在雨里',
+  ]
   return {
-    synced: false,
-    lines: [
-      '车灯照着前面的雨',
-      '收音机开得很低',
-      '再过一个收费站',
-      '就快到家了',
-      '',
-      '夜行高速，一直往南',
-      '把这座城留在身后',
-    ].map((text) => ({ start: 0, end: 0, text })),
+    synced: true,
+    lines: lines.map((text, index) => ({ start: index * 5, end: (index + 1) * 5, text })),
     provider: '',
   }
 }

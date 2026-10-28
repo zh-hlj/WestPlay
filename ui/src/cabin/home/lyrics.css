@@ -1,0 +1,81 @@
+/* The line being sung, on Home and the Dashboard (home/LyricsBar.tsx): glass, over the screens' foot, clear of
+   their dots and widgets. */
+.lyrics-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  translate: -50% 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  max-width: 70%;
+  padding: 10px 26px 9px;
+  border-radius: 20px;
+  background: rgb(18 18 22 / 0.64);
+  box-shadow:
+    0 12px 36px rgb(0 0 0 / 0.35),
+    inset 0 0 0 1px rgb(255 255 255 / 0.09);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  pointer-events: none;
+  text-align: center;
+}
+
+.lyrics-text {
+  font-size: calc(24px * var(--text-scale, 1));
+  font-weight: 600;
+  line-height: 1.2;
+  color: rgb(255 255 255 / 0.96);
+  text-shadow: 0 2px 14px rgb(0 0 0 / 0.45);
+  animation: lyric-in 320ms var(--motion-ease, ease) both;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.lyrics-next {
+  font-size: calc(16px * var(--text-scale, 1));
+  line-height: 1.2;
+  color: rgb(255 255 255 / 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.lyrics-track {
+  font-size: calc(12px * var(--text-scale, 1));
+  letter-spacing: 0.2px;
+  color: rgb(255 255 255 / 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@keyframes lyric-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+
+.appearance-light .lyrics-bar {
+  background: rgb(250 250 252 / 0.72);
+  box-shadow:
+    0 12px 36px rgb(0 0 0 / 0.18),
+    inset 0 0 0 1px rgb(0 0 0 / 0.06);
+}
+
+.appearance-light .lyrics-text {
+  color: rgb(20 20 24 / 0.96);
+  text-shadow: none;
+}
+
+.appearance-light .lyrics-next,
+.appearance-light .lyrics-track {
+  color: rgb(20 20 24 / 0.55);
+}

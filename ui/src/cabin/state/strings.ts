@@ -492,6 +492,9 @@ export interface Strings {
     dashboard: string
     widgets: string
     showAlbumArt: string
+    /** The lyric line on Home and the Dashboard, and what it is. */
+    showLyrics: string
+    showLyricsFooter: string
     /** Sound, and in it the Equalizer: the speakers as tuned (Recommended) or the player's own tone (Custom), what
      * it does, its three bands under the graph, and the curve set back. */
     sound: string
@@ -1008,6 +1011,8 @@ export const STRINGS: Record<Language, Strings> = {
       dashboard: 'Dashboard',
       widgets: 'Widgets',
       showAlbumArt: 'Show Album Art',
+      showLyrics: 'Show Lyrics',
+      showLyricsFooter: 'The line being sung, on Home and the Dashboard.',
       sound: 'Sound',
       equalizer: 'Equalizer',
       recommended: 'Recommended',
@@ -1537,6 +1542,8 @@ export const STRINGS: Record<Language, Strings> = {
       dashboard: 'Gösterge Paneli',
       widgets: 'Widget’lar',
       showAlbumArt: 'Albüm Kapağını Göster',
+      showLyrics: 'Şarkı Sözlerini Göster',
+      showLyricsFooter: 'Söylenen dize, Ana ekranda ve Panoda.',
       sound: 'Ses',
       equalizer: 'Ekolayzır',
       recommended: 'Önerilen',
@@ -2065,6 +2072,8 @@ export const STRINGS: Record<Language, Strings> = {
       dashboard: '仪表盘',
       widgets: '小组件',
       showAlbumArt: '显示专辑封面',
+      showLyrics: '显示歌词',
+      showLyricsFooter: '播放时在 Home 和仪表盘上显示当前歌词。',
       sound: '声音',
       equalizer: '均衡器',
       recommended: '推荐',

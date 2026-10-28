@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { useAppIcon } from '../state/hooks'
 import { type AppId, APPS, RELEASED_APP_IDS } from '../state/apps'
+import { LyricsBar } from './LyricsBar'
 import { useLaunchStyle } from '../state/launch'
 import { go, useCabin } from '../state/store'
 import { useText } from '../state/text'
@@ -126,6 +127,7 @@ export function Home() {
           ))}
         </div>
       )}
+      <LyricsBar />
     </section>
   )
 }

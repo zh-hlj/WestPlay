@@ -334,10 +334,13 @@ function NowPlayingPage() {
   const text = useText()
   const albumArt = useCabin((state) => state.albumArt)
   const setAlbumArt = useCabin((state) => state.setAlbumArt)
+  const showLyrics = useCabin((state) => state.showLyrics)
+  const setShowLyrics = useCabin((state) => state.setShowLyrics)
   return (
     <Page title={text.nowPlaying}>
-      <Group>
+      <Group footer={text.settings.showLyricsFooter}>
         <SwitchRow label={text.settings.showAlbumArt} on={albumArt} onToggle={setAlbumArt} />
+        <SwitchRow label={text.settings.showLyrics} on={showLyrics} onToggle={setShowLyrics} />
       </Group>
     </Page>
   )

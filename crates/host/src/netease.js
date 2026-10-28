@@ -178,7 +178,9 @@
   let chosen = 0
   let unmuted = ''
   const mediaToPlay = () => {
-    if (directTrack) return null
+    // Our own element: through the truck's speakers only when its CDN lets the page's audio be captured (CORS:
+    // music.126.net answers `Access-Control-Allow-Origin: *`). Otherwise it plays as the page's own sound.
+    if (directTrack) return directCors ? directElement : null
     const here = [...KNOWN].filter((element) => element.ownerDocument === document && usable(element))
     const sounding = here.filter((element) => !element.muted)
     if (sounding.length > 0) return sounding[chosen % sounding.length]
@@ -591,6 +593,7 @@
   // would be CORS-silent), the cabin shows it, and the page's own player is left alone.
   let directTrack = null
   let directElement = null
+  let directCors = false
   let directList = null
   let directAt = 0
   let directStepping = false
@@ -610,15 +613,47 @@
     const https = url.replace(/^http:/, 'https:')
     return https.startsWith('https://') ? https : null
   }
+  // Whether the truck's speakers can take an audio address's sound: the CDN has to let the page's Web Audio
+  // capture it (CORS), asked once per host. NetEase's own CDNs do; another may not, and then the sound stays the
+  // page's own (direct output, no cab's 3D sound).
+  const captureHosts = new Map()
+  const canCapture = async (url) => {
+    try {
+      const origin = new URL(url).origin
+      if (captureHosts.has(origin)) return captureHosts.get(origin)
+      let ok = false
+      try {
+        // A HEAD: a simple request (no preflight), whose CORS headers say whether the page can capture it.
+        const response = await pageFetch(url, { method: 'HEAD' })
+        ok = response.ok && response.headers.get('access-control-allow-origin') !== null
+      } catch {
+        ok = false
+      }
+      captureHosts.set(origin, ok)
+      return ok
+    } catch {
+      return false
+    }
+  }
   const directSong = async (song, playlist) => {
     const url = await directUrl(song)
     if (!url) return false
+    const capture = await canCapture(url)
     const detail = await get(`/api/song/detail?ids=[${song}]`).catch(() => null)
     const item = detail?.songs?.[0]
     if (!item) return false
+    if (directElement && capture !== directCors) {
+      // The other way of playing (through the cab's Web Audio, or not): a fresh element, as an element is taken
+      // into a Web Audio graph once.
+      directElement.pause()
+      directElement.remove()
+      directElement = null
+    }
+    directCors = capture
     if (!directElement) {
       directElement = document.createElement('audio')
       directElement.preload = 'auto'
+      directElement.crossOrigin = capture ? 'anonymous' : null
       document.documentElement.appendChild(directElement)
       for (const name of ['play', 'pause', 'seeked', 'loadedmetadata', 'timeupdate'])
         directElement.addEventListener(name, () => {

@@ -451,6 +451,8 @@
   window.chrome?.webview?.addEventListener('message', ({ data }) => {
     try {
       if (CAB[data?.action]) CAB[data.action](data)
+      else if (data?.action === 'videoShow') void picture?.play().catch(() => {})
+      else if (data?.action === 'videoHide') picture?.pause()
       else if (data?.action === 'ask') answer(data.id, data.question)
       else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})
     } catch {

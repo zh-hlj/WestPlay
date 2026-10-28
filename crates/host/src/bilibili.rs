@@ -196,9 +196,15 @@ impl Bilibili {
                 let width = (*width).min(frame_width.saturating_sub(x as u32)).max(1);
                 let height = (*height).min(frame_height.saturating_sub(y as u32)).max(1);
                 self.view.place(x, y, width, height)?;
-                self.view.show(true)
+                self.view.show(true)?;
+                let said = serde_json::to_string(command).unwrap_or_default();
+                self.view.post_json(&said)
             }
-            Command::VideoHide => self.view.show(false),
+            Command::VideoHide => {
+                self.view.show(false)?;
+                let said = serde_json::to_string(command).unwrap_or_default();
+                self.view.post_json(&said)
+            }
             Command::SignOut => {
                 self.view.delete_cookies()?;
                 self.view.navigate(HOME)

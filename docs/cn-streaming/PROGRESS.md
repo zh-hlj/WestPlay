@@ -181,3 +181,11 @@
 - 本机 demo 注入播放态验证：全屏区域 1346×819、视频洞/控制层同尺寸（截图）。
 - 校验：tsc 0；vitest 451；npm build 通过。
 - preview16 构建中。
+
+## 2026-10-28 · 里程碑 20：B 站全屏播放器收尾（本地已提交，网络恢复后构建 preview17）
+
+- 全屏播放器加进度条（拖动 seek，本地 250ms 刷新时间）。
+- 修复 Now Playing 与全屏之间的视频洞交接：进入全屏时 Now Playing 的洞卸载、全屏的洞挂上；退出反之；关闭 Now Playing 时退出全屏。
+- 隐藏时暂停 B 站页面的视频解码（host 转发 videoShow/VideoHide，页面 `picture` 跟随 play/pause）。
+- 校验：tsc 0；vitest 451；cargo test host 212 passed；node --check 通过。
+- GitHub 网络当前不可达（fetch/API 超时），preview16 构建与本地提交 595dad5/2084c51 尚未推送，恢复后统一推送并构建 preview17。

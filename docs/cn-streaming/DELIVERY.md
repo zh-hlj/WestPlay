@@ -110,3 +110,9 @@
 - 在 bilibili 页面内取 `player/playurl` DASH 视频地址（<=720P），用 `<video muted>` 播放：`paused:false`、`readyState:4`、`currentTime` 前进（匿名环境 480P；登录后可选 720/1080P）；
 - 音频走页面 fetch->Blob->cab_sound（实测 fetch 200、Blob 2.4MB、AudioContext 电平 0.0616）；
 - host `videoShow/videoHide/videoQuality` 与 Shell `#video-over` 开洞、Now Playing/全屏切换均已接线；真机仍需确认画面合成与音画同步。
+
+## 13. RC1（2026-10-28）
+
+- 功能范围：网易云/QQ/B 站三个独立 App；B 站视频 Now Playing + 全屏 + 清晰度；三服务 3D 声场；音量修复；全链路签名。
+- 已知限制：QQ 微信登录无法 vkey（需 QQ 账号）；B 站视频真机合成待确认；网易云 3D 待真机日志确认。
+- 安装：先 `Trust-Certificate.bat`，再用安装包或便携包；companion 账号页登录。

@@ -74,8 +74,8 @@ const SERVICES: Record<
   },
   qq: {
     name: 'QQ 音乐',
-    app: 'netease',
-    glow: GLOW.netease,
+    app: 'qq',
+    glow: GLOW.qq,
     signIn: qqSignIn,
     signOut: qqSignOut,
     signingIn: (status) => status?.qqSigningIn ?? false,
@@ -83,8 +83,8 @@ const SERVICES: Record<
   },
   bilibili: {
     name: '哔哩哔哩',
-    app: 'netease',
-    glow: GLOW.netease,
+    app: 'bilibili',
+    glow: GLOW.bilibili,
     signIn: bilibiliSignIn,
     signOut: bilibiliSignOut,
     signingIn: (status) => status?.bilibiliSigningIn ?? false,

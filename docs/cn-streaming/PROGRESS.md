@@ -153,3 +153,9 @@
 - 本地验证：便携 exe、安装包内嵌 exe、安装包本身三者签名均为 `CN=WestPlay CN Streaming Preview`（valid self-signed）。
 - QQ/B 站 Blob 缓存 3 首上限 + revoke；B 站 Blob + Web Audio 本机 headless 实测电平 0.0616。
 - CI 成功；SHA256 全 match。
+
+## 2026-10-28 · 里程碑 16：拆 App 后的界面收尾（preview13）
+
+- 仪表盘 Now Playing 打开当前音乐所属的 App（netease/qq/bilibili），不再总是网易云。
+- companion 账号页 QQ/哔哩哔哩使用自己的 AppId 与光效（GLOW.qq / GLOW.bilibili）。
+- 校验：tsc 0 错误；vitest 451 passed。

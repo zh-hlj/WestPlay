@@ -17,6 +17,8 @@ export const GLOW = {
   youtube: 'oklch(0.58 0.22 28)',
   spotify: 'oklch(0.66 0.17 150)',
   netease: 'oklch(0.58 0.24 25)',
+  qq: 'oklch(0.66 0.17 150)',
+  bilibili: 'oklch(0.68 0.19 355)',
   weather: 'oklch(0.66 0.13 232)',
   dashboard: 'oklch(0.64 0.15 240)',
 }

@@ -95,13 +95,16 @@ function YouTubeMusicWidget({ youtubeMusic }: { youtubeMusic: NonNullable<Return
 
 /** NetEase Cloud Music's music: what plays, its controls, opening NetEase Cloud Music on Now Playing. */
 function NeteaseWidget({ netease }: { netease: NonNullable<ReturnType<typeof useNeteaseSource>> }) {
+  // The three services are separate apps now: open the one the music is from.
+  const service = useNetease((state) => state.source)
+  const app = service === 'qq' ? 'qq' : service === 'bilibili' ? 'bilibili' : 'netease'
   return (
     <MusicWidget
       source={netease.source}
       artwork={netease.artwork}
       onOpen={() => {
         useNetease.setState({ nowPlaying: true })
-        go({ type: 'openApp', app: 'netease' })
+        go({ type: 'openApp', app })
       }}
       onControl={(action) => {
         if (action === 'playPause') playOrPauseNetease()

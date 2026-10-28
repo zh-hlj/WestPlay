@@ -200,11 +200,15 @@ export function NowPlaying() {
   const open = useNetease((state) => state.nowPlaying)
   const playback = useNetease((state) => state.playback)
   const source = useNetease((state) => state.source)
+  const bilibiliFullscreen = useBilibiliVideo((state) => state.fullscreen)
   const lyricsOpen = useNetease((state) => state.lyrics)
   if (!open || !playback) return null
   const words = text.netease
   const track = playback.track
-  const close = () => useNetease.setState({ nowPlaying: false, lyrics: false })
+  const close = () => {
+    useBilibiliVideo.getState().setFullscreen(false)
+    useNetease.setState({ nowPlaying: false, lyrics: false })
+  }
   return (
     <div className={`ne-now${source === 'bilibili' ? ' bili' : ''}`} role="dialog" aria-label={words.nowPlaying}>
       <header className="ne-now-top">
@@ -226,7 +230,7 @@ export function NowPlaying() {
       </header>
       <div className="ne-now-main">
         <div key={track.id} className={`ne-now-art${playback.direction === -1 ? ' back' : ''}${source === 'bilibili' ? ' bili' : ''}`}>
-          {source === 'bilibili' ? (
+          {source === 'bilibili' && !bilibiliFullscreen ? (
             <BilibiliVideoHole className="ne-now-cover bili-video-hole" />
           ) : (
             <Cover name={track.name} image={track.image} className="ne-now-cover" />

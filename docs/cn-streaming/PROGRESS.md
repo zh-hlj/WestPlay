@@ -214,3 +214,9 @@
 - host `bilibili.rs` 加 `VideoQuality { height }` 并转发页面；页面按 720P/1080P/自动重取 playurl 视频地址，切换时保持播放位置重载画面。
 - 全屏播放器右上角加 720P/1080P/自动按钮。
 - 校验：tsc 0；vitest 451；host 212 passed。
+
+## 2026-10-28 · 里程碑 24：QQ 微信登录 uin 与提示（preview19）
+
+- 用户 preview18 测试日志：`[qq] account signed in uin=no`（仍无 QQ uin）→ uin() 加 `wxuin` 回退；vkey debug 增加存在的 cookie 名（uin/wxuin/qlogin_uid/qm_keyst）。
+- companion QQ 行标注「播放需 QQ 账号」。
+- 校验：tsc 0；vitest 451；node --check 通过。

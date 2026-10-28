@@ -189,3 +189,10 @@
 - 隐藏时暂停 B 站页面的视频解码（host 转发 videoShow/VideoHide，页面 `picture` 跟随 play/pause）。
 - 校验：tsc 0；vitest 451；cargo test host 212 passed；node --check 通过。
 - GitHub 网络当前不可达（fetch/API 超时），preview16 构建与本地提交 595dad5/2084c51 尚未推送，恢复后统一推送并构建 preview17。
+
+## 2026-10-28 · 真机日志分析（第二次测试 15:39）
+
+- B 站：登录成功（`account signed in mid=yes`）、页面加载、播放/暂停正常 → B 站 v1 可用（视频画面上线前）。
+- QQ：登录成功（`uin=yes`）但 vkey 104003；用其 WebView2 cookie profile 无头复现，发现是**微信登录**（`qm_keyst` 以 `W_` 开头，只有 wxuin/euin/wxopenid，没有 QQ uin），`musicu` vkey 不认微信会话。已修 uin 归一化/重试/日志；微信登录仍无法直链，需 QQ 账号登录（待用户重登验证）。
+- 网易云：日志 `silent while playing`；根因是 CORS 探测可能瞬时失败并被缓存 false；已改为成功才缓存、失败重试、并记 `[netease] debug: capture speakers|direct <host>`。
+- 本地新增（未推送，GitHub 网络不可达）：B 站全屏播放器/进度条/洞交接/隐藏暂停/排行榜、网易云探测修复、QQ vkey 修复。

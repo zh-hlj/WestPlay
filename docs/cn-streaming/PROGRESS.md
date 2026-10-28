@@ -83,3 +83,10 @@
 - `netease.js`：直接播放的 URL 先探测 CORS，允许时给 `<audio>` 加 `crossOrigin=anonymous` 并交给 `cab_sound`（卡车喇叭/HRTF/EQ/车外闷音/频谱）；不允许时保持直出。
 - CI 构建 `v2.1.3-cn-preview4` 成功；本地 SHA256 校验全部 match。
 - 待真机：车内声场/EQ/频谱效果；QQ 登录/vkey 仍未真机验证。
+
+## 2026-10-28 · 里程碑 6：哔哩哔哩可行性验证
+
+- headless Edge 在 bilibili 页面实测：搜索/视频详情/playurl（DASH 音频）均可匿名；音频 `<audio>` 在页面内播放正常（currentTime 在走）。
+- Web Audio 捕获电平 0（CDN 无 ACAO）→ B 站 v1 只做直出，无卡车 3D 声场。
+- 设计文档：`docs/cn-streaming/BILIBILI.md`（架构/接口/风险/步骤）。
+- 下一步：`bilibili.js` + `bilibili.rs` + host/UI 第三来源接线。

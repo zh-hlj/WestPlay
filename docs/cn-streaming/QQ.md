@@ -50,3 +50,18 @@
 4. 车内 QQ 音乐组件（复制 netease 组件改造）；
 5. 歌单/收藏/歌词/VIP 状态；列表连续播放；
 6. 真机验证 + CI 构建。
+
+
+## 6. 可行性验证（2026-10-28，headless Edge + CDP）
+
+用 headless Edge（`--disable-web-security`，与计划中的 QQ WebView 参数相同）打开 https://y.qq.com/ ，在页面内用 fetch 做验证：
+
+| 验证项 | 结果 |
+| --- | --- |
+| 页面内计算 `qqSearchSign`（SHA-1 + 固定索引 + XOR + base64） | ✅ 与 Mineradio 算法一致，`zzc…` 形式 |
+| `POST u.y.qq.com/cgi-bin/musics.fcg?sign=…` 搜索（未登录） | ✅ HTTP 200，返回歌曲（晴天 / mid 0039MnYb0qxYhV） |
+| `document.cookie` 可读（未登录态） | ✅ 可读到 pgv_pvid 等；登录后 uin/qm_keyst 待验证是否 HttpOnly |
+| 匿名 `vkey.GetVkeyServer / CgiGetVkey` | ❌ `result:104003`、purl 为空 —— **播放地址必须带登录 cookie** |
+| 返回的 sip | 为 `http://aqqmusic.tc.qq.com/` 等 http 地址，https 页面直接播放会被混合内容拦截；需要 https 化或在页面内用 host 代理 |
+
+结论：**CORS 禁用 + 页面内 fetch + 搜索/签名路径可行**；QQ 播放必须实现账号登录（cookie），并且要处理音频地址的 http→https/代理问题。下一步先做登录窗口 + qq.js（搜索/vkey/歌词）+ host qq.rs。

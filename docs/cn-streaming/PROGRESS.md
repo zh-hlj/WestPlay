@@ -138,3 +138,11 @@
 - 修复：切换三个独立 App 时先暂停旧服务（`setSource` 发 pause），避免两个服务同时出声。
 - 校验：tsc 0 错误；vitest 64 文件 451 测试全过。
 - 剩余：QQ/B 站的卡车 3D 声场（需 cab 接线 + blob 音频）、内嵌 exe 签名、全量真机自测。
+
+## 2026-10-28 · 里程碑 14：QQ/B站卡车 3D 声场
+
+- qq.rs/bilibili.rs：复制 netease 的 Cab/Told/cab()/Spectrum 管线，启动脚本先 cab_sound.js；B 站启用独立 profile 的 --disable-web-security。
+- qq.js/bilibili.js：页面 fetch 音频为 blob 再播（绕过 CDN 无 CORS），cab 实例接收 host 的 speakers/head/outside/equalizer/spectrum 并 250ms tick。
+- lib.rs：QQ/B站 Spectrum 转发到车内 Equalizer；cab 循环给两个服务发卡车喇叭/头部/车外 EQ。
+- 验证：node --check 两脚本；cargo test -p westplay-host --lib 212 passed / 0 failed；cargo check 通过。
+- 待构建 preview11，真机验证 blob 起播延迟与 3D 效果。

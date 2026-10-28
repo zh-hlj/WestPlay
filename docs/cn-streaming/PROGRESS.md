@@ -110,3 +110,10 @@
 - CI 构建 `v2.1.3-cn-preview5` 成功；SHA256 本地校验全部 match。
 - 便携包验证：host 含 bilibili/playurl/api.bilibili.com；cabin/companion UI 均含 bilibili；三源切换完整。
 - 待真机：网易云 3D 声场、QQ 登录/vkey、B站搜索/播放/收藏。
+
+## 2026-10-28 · 里程碑 10：三源修复 + 内嵌 exe 签名（preview6）
+
+- 修复 B 站条目 kind（video→song，避免 host `Answer` 解析失败、UI 点击无效）。
+- QQ：登录判定不再要求读 HttpOnly 的 qm_keyst（资料接口/uin cookie 即可），登录窗口检测加页面头像兜底。
+- CI：构建 app 二进制后先签名，再交给 NSIS 打包（让安装后的 westplay.exe 也带签名）。
+- 待构建验证：签名是否保留、三源运行。

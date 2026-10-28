@@ -37,7 +37,8 @@
   let account = { uin: '', nick: '', avatar: null, vip: null }
   let accountAt = 0
   const uin = () => account.uin || cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || ''
-  const signedIn = () => signed || Boolean(uin() && cookie('qm_keyst'))
+  // Signed in: the profile said so, or the page's own uin cookie (qm_keyst may be HttpOnly: not read here).
+  const signedIn = () => signed || Boolean(uin())
   const vip = () => {
     if (account.vip) return account.vip
     const raw = cookie('vip_type') || cookie('qqmusic_vip') || ''

@@ -9,9 +9,11 @@
     const found = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
     return found ? found[1] : ''
   }
-  const signedIn = () =>
-    Boolean(cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin')) &&
-    Boolean(cookie('qm_keyst') || cookie('qqmusic_key') || cookie('music_key') || cookie('p_skey'))
+  // Signed in: its uin cookie (qm_keyst may be HttpOnly, so not read here), or the page's own account picture.
+  const signedIn = () => {
+    if (cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin')) return true
+    return Boolean(document.querySelector('.top_login__name, .u-face, .yqq-header .pic, .header-avatar'))
+  }
   const SIGN_IN = '.top_login__link, .js_login, [data-stat="login"], a[href*="login.qq.com"]'
   let said = false
   let pressed = false

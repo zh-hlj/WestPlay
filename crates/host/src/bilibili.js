@@ -83,7 +83,8 @@
   }
   const itemOf = (video) => {
     const track = trackOf(video)
-    return track && { id: track.id, kind: 'video', name: track.name, by: track.artists.join(', '), image: track.image, description: null }
+    // The app's items are what it plays: a video's track is a song there (its audio).
+    return track && { id: track.id, kind: 'song', name: track.name, by: track.artists.join(', '), image: track.image, description: null }
   }
   const folderOf = (folder) => {
     const id = folder?.id ?? folder?.media_id

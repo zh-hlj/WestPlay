@@ -97,3 +97,10 @@
 
 - **QQ 音乐微信登录**：vkey 服务返回 104003，微信会话无 QQ uin；请用 QQ 账号扫码。代码已加 `uin()` 的 wxuin 回退、vkey 重试与 `wechat=yes/no`/cookie 名日志。
 - 网易云 3D 的 CORS 探测已改为成功才缓存、失败重试；日志 `[netease] debug: capture speakers|direct <host>` 可确认。
+
+## 11. QQ 微信登录的结论（2026-10-28）
+
+- 用你的 WebView2 登录态在无头 Edge 复现：cookie 为微信登录（`qm_keyst W_`、`wxuin/euin/wxopenid`，无 QQ uin）；
+- `vkey.GetVkeyServer` 对 `wxuin/euin/qlogin_uid` 各种 uin 与 `authst/ct/platform` 组合均返回 104003；即使宿主侧带完整 Cookie 请求也一样；
+- 尝试让 QQ 网页自己播放（免费歌曲页 + 点击播放）：页面没有可直接控制的 `<audio>/<video>` 元素（播放器走内部加密流），无法做轻量回退；
+- 结论：QQ 音乐**播放需 QQ 账号扫码登录**；微信登录可浏览/收藏但无法直链播放。companion 已在 QQ 行提示“播放需 QQ 账号”。

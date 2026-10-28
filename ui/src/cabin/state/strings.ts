@@ -441,6 +441,7 @@ export interface Strings {
     nowPlaying: string
     playingFrom: string
     upNext: string
+    fullscreen: string
     /** A card's or a page's line: what it is. */
     kinds: { song: string; playlist: string; album: string; artist: string; radio: string }
     /** "12 songs" */
@@ -964,6 +965,7 @@ export const STRINGS: Record<Language, Strings> = {
       nowPlaying: 'Now playing',
       playingFrom: 'Playing from',
       upNext: 'Up next',
+      fullscreen: 'Full screen',
       kinds: { song: 'Songs', playlist: 'Playlists', album: 'Albums', artist: 'Artists', radio: 'Radio' },
       songs: (count) => (count === 1 ? '1 song' : `${count} songs`),
       signIn: 'Sign in',
@@ -1491,6 +1493,7 @@ export const STRINGS: Record<Language, Strings> = {
       nowPlaying: 'Şimdi çalıyor',
       playingFrom: 'Şuradan çalınıyor',
       upNext: 'Sıradaki',
+      fullscreen: 'Tam ekran',
       kinds: { song: 'Şarkılar', playlist: 'Çalma listeleri', album: 'Albümler', artist: 'Sanatçılar', radio: 'Radyo' },
       songs: (count) => `${count} şarkı`,
       signIn: 'Oturum aç',
@@ -2019,6 +2022,7 @@ export const STRINGS: Record<Language, Strings> = {
       nowPlaying: '正在播放',
       playingFrom: '播放来源',
       upNext: '接下来播放',
+      fullscreen: '全屏观看',
       kinds: { song: '单曲', playlist: '歌单', album: '专辑', artist: '歌手', radio: '电台' },
       songs: (count) => `${count} 首歌曲`,
       signIn: '登录',

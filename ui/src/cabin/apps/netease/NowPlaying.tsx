@@ -11,7 +11,7 @@ import {
   ShuffleGlyph,
   VolumeGlyph,
 } from './glyphs'
-import { BilibiliVideoHole } from './bilibiliVideo'
+import { BilibiliVideoHole, useBilibiliVideo } from './bilibiliVideo'
 import { Cover, Failed } from './parts'
 import {
   type Playback,
@@ -272,6 +272,15 @@ export function NowPlaying() {
             </button>
           </div>
           <Volume playback={playback} />
+          {source === 'bilibili' && (
+            <button
+              type="button"
+              className="ne-pill bili-full-open"
+              onClick={() => useBilibiliVideo.getState().setFullscreen(true)}
+            >
+              {words.fullscreen}
+            </button>
+          )}
         </div>
       </div>
       {playback.next.length > 0 && !lyricsOpen && <UpNext playback={playback} />}

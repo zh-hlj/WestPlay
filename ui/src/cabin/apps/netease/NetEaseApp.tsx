@@ -3,6 +3,8 @@ import { useKeyboard } from '../../keyboard/store'
 import { TextField } from '../../keyboard/TextField'
 import { useText } from '../../state/text'
 import { BackGlyph, MarkGlyph, NoteCloudGlyph, PersonGlyph, SearchGlyph } from './glyphs'
+import { BilibiliFullPlayer } from './BilibiliFullPlayer'
+import { useBilibiliVideo } from './bilibiliVideo'
 import { MiniPlayer, NowPlaying } from './NowPlaying'
 import { Home, Mine, Page, Search, Typing } from './pages'
 import {
@@ -40,6 +42,7 @@ export function NetEaseApp({ only }: { only?: Source } = {}) {
     if (only) setSource(only)
   }, [only])
   const source = useNetease((state) => state.source)
+  const bilibiliFullscreen = useBilibiliVideo((state) => state.fullscreen)
   const tab = useNetease((state) => state.tab)
   const views = useNetease((state) => state.views)
   const account = useAccount()
@@ -199,6 +202,7 @@ export function NetEaseApp({ only }: { only?: Source } = {}) {
       )}
       <Toast />
       <NowPlaying />
+      {source === 'bilibili' && bilibiliFullscreen && <BilibiliFullPlayer />}
     </section>
   )
 }

@@ -173,3 +173,11 @@
 - NowPlaying 在 B 站源时改为纵向布局：视频区域 16:9、约占主体 62% 高度，歌名/进度/控制/音量在下方；本机 demo 注入播放态截图验证（视频 803×452，控制区 261px 可见）。
 - 校验：tsc 0；vitest 451；npm build 通过。
 - preview15 构建中。
+
+## 2026-10-28 · 里程碑 19：B 站全屏视频播放器（preview16）
+
+- Now Playing 里 B 站视频下方新增「全屏观看」按钮；进入全屏后视频占满整个 App 区域（侧边栏保留），顶部标题/退出、底部上一首/播放暂停/下一首悬浮在画面上（走 Shell 的 `#video-over` 层，避开开洞遮罩）。
+- 修正 `BilibiliVideoHole` 的坐标：mask 用 carplay 相对 CSS 像素、host `videoShow` 用设备像素（此前 mask 坐标错误）。
+- 本机 demo 注入播放态验证：全屏区域 1346×819、视频洞/控制层同尺寸（截图）。
+- 校验：tsc 0；vitest 451；npm build 通过。
+- preview16 构建中。

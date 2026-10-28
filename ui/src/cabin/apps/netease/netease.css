@@ -1276,3 +1276,70 @@
 .shell .ne-now.bili .ne-now-next {
   flex: none;
 }
+
+/* Bilibili full screen: its video over the app, its controls in the shell's video layer over the picture. */
+.shell .bili-full {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: #000;
+}
+
+.shell .bili-full-hole {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: 0;
+}
+
+.bili-full-over {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 16px 22px 20px;
+  pointer-events: auto;
+}
+
+.bili-full-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #fff;
+}
+
+.bili-full-exit {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.bili-full-title {
+  font-size: 22px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bili-full-by {
+  font-size: 16px;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.bili-full-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+}
+
+.shell .bili-full-open {
+  align-self: flex-start;
+}

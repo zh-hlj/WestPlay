@@ -15,11 +15,16 @@ interface BilibiliVideoState {
   /** The hole the shell cuts over the page for Bilibili's picture; `null`: none (it plays on, heard). */
   hole: BilibiliHole | null
   setHole(hole: BilibiliHole | null): void
+  /** Its video over the whole app, its controls over it (BilibiliFullPlayer.tsx). */
+  fullscreen: boolean
+  setFullscreen(fullscreen: boolean): void
 }
 
 export const useBilibiliVideo = create<BilibiliVideoState>()((set) => ({
   hole: null,
   setHole: (hole) => set({ hole }),
+  fullscreen: false,
+  setFullscreen: (fullscreen) => set({ fullscreen }),
 }))
 
 /**
@@ -33,20 +38,28 @@ export function BilibiliVideoHole({ className }: { className?: string }) {
     const element = frame.current
     if (!element) return
     const place = () => {
+      const area = document.querySelector('.carplay')?.getBoundingClientRect()
       const box = element.getBoundingClientRect()
-      if (!box.width || !box.height) return
-      const scale = window.devicePixelRatio
+      if (!area || !box.width || !box.height) return
+      // The shell's hole is in the CarPlay area's pixels (as YouTube's VideoHole); the host wants the frame's.
       const zoom = element.offsetWidth ? box.width / element.offsetWidth : 1
-      const radius = parseFloat(getComputedStyle(element).borderTopLeftRadius) * zoom * scale
+      const radius = parseFloat(getComputedStyle(element).borderTopLeftRadius) * zoom
       const hole: BilibiliHole = {
+        x: box.left - area.left,
+        y: box.top - area.top,
+        width: box.width,
+        height: box.height,
+        radius: Number.isFinite(radius) ? radius : 0,
+      }
+      useBilibiliVideo.getState().setHole(hole)
+      const scale = window.devicePixelRatio
+      bilibiliVideo({
+        action: 'videoShow',
         x: Math.round(box.left * scale),
         y: Math.round(box.top * scale),
         width: Math.round(box.width * scale),
         height: Math.round(box.height * scale),
-        radius: Math.round(Number.isFinite(radius) ? radius : 0),
-      }
-      useBilibiliVideo.getState().setHole(hole)
-      bilibiliVideo({ action: 'videoShow', x: hole.x, y: hole.y, width: hole.width, height: hole.height })
+      })
     }
     place()
     const observer = new ResizeObserver(place)

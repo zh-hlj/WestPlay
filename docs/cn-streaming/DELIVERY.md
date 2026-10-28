@@ -116,3 +116,7 @@
 - 功能范围：网易云/QQ/B 站三个独立 App；B 站视频 Now Playing + 全屏 + 清晰度；三服务 3D 声场；音量修复；全链路签名。
 - 已知限制：QQ 微信登录无法 vkey（需 QQ 账号）；B 站视频真机合成待确认；网易云 3D 待真机日志确认。
 - 安装：先 `Trust-Certificate.bat`，再用安装包或便携包；companion 账号页登录。
+
+## 14. RC2（2026-10-28）
+
+- 网易云 3D：对 `*.music.126.net` / `*.music.163.com` 直接视为可捕获（CDN 已实测 `Access-Control-Allow-Origin: *`），不再依赖可能被 WebView2 HEAD 拒绝的探测；其余保留“成功才缓存、失败重试”。

@@ -621,6 +621,13 @@
   const canCapture = async (url) => {
     try {
       const origin = new URL(url).origin
+      const host = new URL(url).hostname
+      // NetEase's own CDNs answer `Access-Control-Allow-Origin: *` (measured 2026-10-28): no probe needed, and a
+      // HEAD this player's WebView2 refuses for its own reasons must not take the truck's speakers away.
+      if (/(^|\.)music\.126\.net$|(^|\.)music\.163\.com$/.test(host)) {
+        captureHosts.set(origin, true)
+        return true
+      }
       // Kept when it works; a failure is asked again next time (a CDN's first answer may be a transient one),
       // never cached, so one bad HEAD doesn't take the truck's speakers from every later song.
       if (captureHosts.get(origin) === true) return true

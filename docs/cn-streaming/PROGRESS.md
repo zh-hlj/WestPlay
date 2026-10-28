@@ -70,3 +70,9 @@
 - 便携包验证：`westplay.exe` 2.1.3 已签名；host 含 `y.qq.com`/`GetVkey`/`musicu.fcg`/`disable-web-security`；cabin UI 含 QQ 源；companion 含 `qqSignedIn`/`qq_sign_in`。
 - 待真机验证：QQ 扫码登录、登录后 vkey 播放、歌单/我的歌单、列表连续播放。
 - 下一步：根据真机结果修 QQ 登录/cookie；之后哔哩哔哩、3D 音效。
+
+## 2026-10-28 · 里程碑 4b：QQ 预览版 3（账号资料接口 + debug 日志）
+
+- `qq.js`：账号从 QQ 资料接口读取（uin/nick/头像/VIP），不再依赖读取 httpOnly cookie；vkey 失败写 `[qq] debug:`；`qq.rs` 转发该日志。
+- CI 构建 `v2.1.3-cn-preview3` 成功；本地 SHA256 校验通过。
+- 待真机：QQ 扫码登录 → 切源 → 搜索/播放/列表；失败时取 `[qq]` 日志继续修。

@@ -108,29 +108,8 @@ jobs:
           $base.bundle.windows.nsis.installerHooks = "installer/ci-hooks.nsh"
           $base | ConvertTo-Json -Depth 40 | Set-Content src-tauri/tauri.ci.conf.json -Encoding UTF8
 
-      - name: Build the app binary, then sign it before the installer bundles it
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path out | Out-Null
-          # The app's own binary, unsigned: signed next, so the installer embeds a signed westplay.exe (the
-          # per-profile install otherwise starts with an unsigned one, as preview 1-5 did).
-          npx tauri build --no-bundle --config src-tauri/tauri.ci.conf.json
-          # The certificate made before the build (the app binary already signed with it).
-          $cert = Get-ChildItem Cert:\CurrentUser\My |
-            Where-Object { $_.Subject -eq 'CN=WestPlay CN Streaming Preview' } |
-            Select-Object -First 1
-          if (-not $cert) {
-            $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject 'CN=WestPlay CN Streaming Preview' `
-              -FriendlyName 'WestPlay CN Streaming Preview' -CertStoreLocation Cert:\CurrentUser\My `
-              -NotAfter (Get-Date).AddYears(5) -HashAlgorithm SHA256
-          }
-          Export-Certificate -Cert $cert -FilePath out/WestPlay-Preview.cer | Out-Null
-          $sig = Set-AuthenticodeSignature -FilePath target/release/westplay.exe -Certificate $cert -HashAlgorithm SHA256
-          Write-Host "signed app binary: $($sig.Status)"
-
-      - name: Bundle the installer from the signed app (no rebuild)
-        run: npx tauri bundle --config src-tauri/tauri.ci.conf.json
+      - name: Build app and NSIS installer
+        run: npx tauri build --config src-tauri/tauri.ci.conf.json
 
       - name: Assemble portable zip
         shell: pwsh
@@ -164,7 +143,7 @@ jobs:
           start "" "%~dp0westplay.exe"
           endlocal
           "@ | Set-Content -LiteralPath "out/portable/启动(避让占用).bat" -Encoding utf8
-          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview7-portable.zip -Force
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview8-portable.zip -Force
 
       - name: Collect build outputs
         shell: pwsh
@@ -202,9 +181,9 @@ jobs:
           Copy-Item out/portable/WestPlay-Preview.cer out/
           Copy-Item -LiteralPath "out/portable/信任证书.bat" out/ -Force
           Copy-Item -LiteralPath "out/portable/信任证书.bat" out/Trust-Certificate.bat -Force
-          Remove-Item out/WestPlay-2.1.3-cn-preview7-portable.zip -Force -ErrorAction SilentlyContinue
-          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview7-portable.zip -Force
-          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.3-cn-preview7-portable.zip -Algorithm SHA256 |
+          Remove-Item out/WestPlay-2.1.3-cn-preview8-portable.zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview8-portable.zip -Force
+          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.3-cn-preview8-portable.zip -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content out/SHA256SUMS.txt -Encoding ascii
 
       - name: Upload artifacts
@@ -213,7 +192,7 @@ jobs:
           name: westplay-windows-msvc
           path: |
             out/installer/*.exe
-            out/WestPlay-2.1.3-cn-preview7-portable.zip
+            out/WestPlay-2.1.3-cn-preview8-portable.zip
             out/WestPlay-Preview.cer
             out/Trust-Certificate.bat
             out/SHA256SUMS.txt
@@ -222,14 +201,14 @@ jobs:
       - name: Attach to the preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.1.3-cn-preview7
+          tag_name: v2.1.3-cn-preview8
           target_commitish: ${{ github.ref_name }}
           prerelease: true
           fail_on_unmatched_files: false
           overwrite_files: true
           files: |
             out/installer/*.exe
-            out/WestPlay-2.1.3-cn-preview7-portable.zip
+            out/WestPlay-2.1.3-cn-preview8-portable.zip
             out/WestPlay-Preview.cer
             out/Trust-Certificate.bat
             out/SHA256SUMS.txt

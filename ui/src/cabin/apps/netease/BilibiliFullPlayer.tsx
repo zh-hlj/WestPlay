@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useText } from '../../state/text'
 import { BilibiliVideoHole, useBilibiliVideo } from './bilibiliVideo'
@@ -17,6 +17,19 @@ export function BilibiliFullPlayer() {
   // The bar moves between the host's playback messages.
   const [, tick] = useState(0)
   const [quality, setQuality] = useState(0)
+  // The controls fade while the picture plays (a pointer wakes them); a faint ghost, still pressable.
+  const [shown, setShown] = useState(true)
+  const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const wake = () => {
+    setShown(true)
+    clearTimeout(idle.current)
+    idle.current = setTimeout(() => setShown(false), 3500)
+  }
+  useEffect(() => {
+    wake()
+    return () => clearTimeout(idle.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   useEffect(() => {
     const timer = setInterval(() => tick((count) => count + 1), 250)
     return () => clearInterval(timer)
@@ -34,7 +47,9 @@ export function BilibiliFullPlayer() {
   const layer = document.getElementById('video-over')
   const controls = (
     <div
-      className="bili-full-over"
+      className={shown ? 'bili-full-over' : 'bili-full-over away'}
+      onPointerMove={wake}
+      onPointerDown={wake}
       style={
         hole
           ? { left: hole.x, top: hole.y, width: hole.width, height: hole.height, borderRadius: hole.radius }

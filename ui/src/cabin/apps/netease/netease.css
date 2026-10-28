@@ -1370,3 +1370,11 @@
   border-radius: 3px;
   background: #fb7299;
 }
+
+.bili-full-over {
+  transition: opacity 400ms var(--ne-ease);
+}
+
+.bili-full-over.away {
+  opacity: 0.12;
+}

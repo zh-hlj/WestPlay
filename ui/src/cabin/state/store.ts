@@ -575,6 +575,15 @@ function receiveHostMessage(now: () => number): (message: HostMessage) => void {
       case 'qqPlayback':
         receiveNeteasePlaybackFrom('qq', message.playback)
         break
+      case 'bilibili':
+        receiveNeteaseStateFrom('bilibili', message)
+        break
+      case 'bilibiliAnswer':
+        receiveNeteaseAnswerFrom('bilibili', message)
+        break
+      case 'bilibiliPlayback':
+        receiveNeteasePlaybackFrom('bilibili', message.playback)
+        break
       case 'youtubeAnswer': {
         const { type: _, id, ...answer } = message
         receiveAnswer(id, answer)

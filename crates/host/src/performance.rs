@@ -48,6 +48,8 @@ pub enum Profile {
     Netease,
     /// QQ Music's own (`webview2-qq`).
     Qq,
+    /// Bilibili's own (`webview2-bilibili`).
+    Bilibili,
 }
 
 /// What the host knows each second while the game runs.
@@ -250,6 +252,7 @@ fn parts_of(
                 Profile::AppleMusic => "Apple Music",
                 Profile::Netease => "NetEase Cloud Music",
                 Profile::Qq => "QQ Music",
+                Profile::Bilibili => "Bilibili",
                 Profile::Cab => match kind {
                     COREWEBVIEW2_PROCESS_KIND_BROWSER => "browser",
                     COREWEBVIEW2_PROCESS_KIND_GPU => "GPU",

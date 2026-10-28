@@ -236,6 +236,12 @@ export type HostMessage =
   | ({ type: 'qqAnswer'; id: number; failed?: boolean } & Partial<NeteaseAnswers>)
   /** What QQ Music plays; `null`: nothing. */
   | { type: 'qqPlayback'; playback: NeteasePlayback | null }
+  /** Bilibili's page, the music app's third source: the same shapes. */
+  | { type: 'bilibili'; signedIn: boolean | null; playing: boolean | null; signingIn: boolean; vip?: string | null }
+  /** Bilibili's answer to the app's question `id` (`failed`: it didn't answer). */
+  | ({ type: 'bilibiliAnswer'; id: number; failed?: boolean } & Partial<NeteaseAnswers>)
+  /** What Bilibili plays; `null`: nothing. */
+  | { type: 'bilibiliPlayback'; playback: NeteasePlayback | null }
 
 /** The game's weather: the one there is and the one it's turning to (the same once it has); in game minutes,
  * how long until the game changes it next; and how wet the roads are, percent. Each of the last two `null`
@@ -320,6 +326,8 @@ export type PageMessage =
   | { type: 'netease'; command: NeteaseCommand }
   /** A command for QQ Music's web player, switched to in the same app (`westplay_host::qq::Command`). */
   | { type: 'qq'; command: QqCommand }
+  /** A command for Bilibili's page, the app's third source (`westplay_host::bilibili::Command`). */
+  | { type: 'bilibili'; command: BilibiliCommand }
 
 /** What the Spotify app asks of Spotify's web player (`westplay_host::spotify::Command`), run hidden by the
  * host: its sign-in, a question (answered with `spotifyAnswer` and the same `id`), and the player's controls
@@ -877,6 +885,9 @@ export type NeteaseRepeat = 'off' | 'all' | 'one'
 
 /** QQ Music's commands: the same actions as NetEase Cloud Music's. */
 export type QqCommand = NeteaseCommand
+
+/** Bilibili's commands: the same actions as NetEase Cloud Music's. */
+export type BilibiliCommand = NeteaseCommand
 
 /** What a card or a row is: a song, a playlist, an album, an artist (or a radio). */
 export type NeteaseKind = 'song' | 'playlist' | 'album' | 'artist' | 'radio'

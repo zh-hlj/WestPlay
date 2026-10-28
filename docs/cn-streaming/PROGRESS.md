@@ -97,3 +97,10 @@
 - 新增 `crates/host/src/bilibili.rs`（服务/命令/问题/报告/登录窗口；复用 `netease.rs` 数据形状）；`signin.rs` 加 `BILIBILI` Site + `bilibili_sign_in.js`（扫码检测）。
 - 验证：`cargo test -p westplay-host --lib bilibili::` 5/5；`node --check bilibili.js`/`bilibili_sign_in.js` 通过。
 - 下一步：lib 接线（第三服务）、app 命令、UI 第三来源（网易云/QQ/哔哩哔哩）、companion 登录行；然后 tsc/vitest/cargo check + 预览构建。
+
+## 2026-10-28 · 里程碑 8：哔哩哔哩接入完成（三源）
+
+- lib.rs/app：第三服务 Bilibili 接线（Status/AccountRequests/PageMessage/start_bilibili/报告/Profile）；`bilibili_sign_in/out/check` 命令。
+- UI：音乐 App 顶部来源三选一（网易云 / QQ音乐 / 哔哩哔哩）；companion 账号页加哔哩哔哩登录行；HostStatus/accounts/preview/strings（en/tr/zh）全接通。
+- 验证：tsc 0 错误；vitest 64 文件 / 451 测试全过；`cargo test -p westplay-host --lib bilibili::` 5/5；`cargo check -p westplay-app`（ASCII 副本）通过。
+- 下一步：CI 预览构建 preview5；真机验证。

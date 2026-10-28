@@ -131,6 +131,13 @@ export function NetEaseApp() {
             <button type="button" className={source === 'qq' ? 'ne-pill on' : 'ne-pill'} onClick={() => setSource('qq')}>
               {words.sources.qq}
             </button>
+            <button
+              type="button"
+              className={source === 'bilibili' ? 'ne-pill on' : 'ne-pill'}
+              onClick={() => setSource('bilibili')}
+            >
+              {words.sources.bilibili}
+            </button>
           </span>
         )}
         {searching ? (

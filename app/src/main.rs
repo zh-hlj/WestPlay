@@ -152,6 +152,25 @@ fn qq_check(accounts: State<Accounts>) {
     accounts.0.qq.request(AccountAction::Check);
 }
 
+/// Opens Bilibili's sign-in in a window on the desktop (a QR code, scanned with its phone app; the status then
+/// says when it's done).
+#[tauri::command]
+fn bilibili_sign_in(accounts: State<Accounts>) {
+    accounts.0.bilibili.request(AccountAction::SignIn);
+}
+
+/// Signs Bilibili out.
+#[tauri::command]
+fn bilibili_sign_out(accounts: State<Accounts>) {
+    accounts.0.bilibili.request(AccountAction::SignOut);
+}
+
+/// Runs Bilibili's page (hidden), so the status says whether it's signed in.
+#[tauri::command]
+fn bilibili_check(accounts: State<Accounts>) {
+    accounts.0.bilibili.request(AccountAction::Check);
+}
+
 /// The maker's Kreosus page, where players support WestPlay's development.
 const SUPPORT_PAGE: &str = "https://kreosus.com/enes-less";
 
@@ -232,6 +251,9 @@ fn main() {
             qq_sign_in,
             qq_sign_out,
             qq_check,
+            bilibili_sign_in,
+            bilibili_sign_out,
+            bilibili_check,
             open_support_page,
             app_log_place,
             customize::customize_list,

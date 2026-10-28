@@ -36,6 +36,9 @@ export interface HostStatus {
   /** The same of QQ Music: signed in or not (`null`: not known yet), and its sign-in window open. */
   qqSignedIn: boolean | null
   qqSigningIn: boolean
+  /** The same of Bilibili: signed in or not (`null`: not known yet), and its sign-in window open. */
+  bilibiliSignedIn: boolean | null
+  bilibiliSigningIn: boolean
   /** The map of the profile played (mirrors `westplay_host::maps::MapStatus`). */
   map: MapStatus
   /** The map the cab shows: its folder in WestPlay's maps, and when it was built (seconds since 1970;
@@ -165,6 +168,21 @@ export function qqSignOut(): Promise<void> {
 /** Runs QQ Music's web player (hidden), so the status says whether it's signed in. */
 export function qqCheck(): Promise<void> {
   return call('qq_check')
+}
+
+/** Opens Bilibili's sign-in in a window on the desktop (a QR code, scanned by its phone app). */
+export function bilibiliSignIn(): Promise<void> {
+  return call('bilibili_sign_in')
+}
+
+/** Signs Bilibili out. */
+export function bilibiliSignOut(): Promise<void> {
+  return call('bilibili_sign_out')
+}
+
+/** Runs Bilibili's page (hidden), so the status says whether it's signed in. */
+export function bilibiliCheck(): Promise<void> {
+  return call('bilibili_check')
 }
 
 /** Opens the support page (Kreosus) in the player's browser. */

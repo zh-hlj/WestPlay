@@ -422,7 +422,7 @@ export interface Strings {
   netease: {
     tabs: { home: string; search: string; mine: string }
     /** The two services the app shows (NetEase Cloud Music, QQ Music). */
-    sources: { netease: string; qq: string }
+    sources: { netease: string; qq: string; bilibili: string }
     searchHint: string
     cancel: string
     search: string
@@ -946,7 +946,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: 'Home', search: 'Search', mine: 'Mine' },
-      sources: { netease: 'NetEase', qq: 'QQ Music' },
+      sources: { netease: 'NetEase', qq: 'QQ Music', bilibili: 'Bilibili' },
       searchHint: 'Search songs, artists, playlists',
       cancel: 'Cancel',
       search: 'Search',
@@ -1471,7 +1471,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: 'Ana Sayfa', search: 'Ara', mine: 'Benim' },
-      sources: { netease: 'NetEase', qq: 'QQ Music' },
+      sources: { netease: 'NetEase', qq: 'QQ Music', bilibili: 'Bilibili' },
       searchHint: 'Şarkı, sanatçı, çalma listesi ara',
       cancel: 'İptal',
       search: 'Ara',
@@ -1997,7 +1997,7 @@ export const STRINGS: Record<Language, Strings> = {
     },
     netease: {
       tabs: { home: '首页', search: '搜索', mine: '我的' },
-      sources: { netease: '网易云', qq: 'QQ音乐' },
+      sources: { netease: '网易云', qq: 'QQ音乐', bilibili: '哔哩哔哩' },
       searchHint: '搜索歌曲、歌手、歌单',
       cancel: '取消',
       search: '搜索',

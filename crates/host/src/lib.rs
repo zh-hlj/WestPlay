@@ -117,6 +117,9 @@ pub struct Status {
     /// The same of QQ Music: signed in or not (`None`: not known, it hasn't run yet), its sign-in window open.
     pub qq_signed_in: Option<bool>,
     pub qq_signing_in: bool,
+    /// The same of Bilibili: signed in or not (`None`: not known, it hasn't run yet), its sign-in window open.
+    pub bilibili_signed_in: Option<bool>,
+    pub bilibili_signing_in: bool,
     /// The map of the profile played: ready, being built, waiting for the game to close...
     pub map: maps::MapStatus,
     /// The map the cab shows: its folder in WestPlay's maps, and when it was built (the companion's
@@ -137,6 +140,7 @@ pub struct AccountRequests {
     pub apple_music: AccountRequest,
     pub netease: AccountRequest,
     pub qq: AccountRequest,
+    pub bilibili: AccountRequest,
 }
 
 /// One service's request, the latest not carried out yet.
@@ -388,6 +392,7 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut youtube_music_log = play_log::PlayLog::new("youtube music");
     let mut netease_log = play_log::PlayLog::new("netease");
     let mut qq_log = play_log::PlayLog::new("qq");
+    let mut bilibili_log = play_log::PlayLog::new("bilibili");
     // Spotify's web player, while the page uses it, and what it last said (sent again when the page reloads):
     // signed in or not, and what plays.
     let mut spotify: Option<spotify::Spotify> = None;
@@ -417,6 +422,11 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut qq_state: Option<qq::State> = None;
     let (mut qq_window_open, mut qq_confirming) = (false, false);
     let mut qq_playback: Option<String> = None;
+    // Bilibili's page, the same way (on its own WebView2 profile).
+    let mut bilibili: Option<bilibili::Bilibili> = None;
+    let mut bilibili_state: Option<bilibili::State> = None;
+    let (mut bilibili_window_open, mut bilibili_confirming) = (false, false);
+    let mut bilibili_playback: Option<String> = None;
     // The settings generation last applied (`None`: apply them once at startup).
     let mut applied_settings = None;
     // Each keybind's presses the page was told of (`PluginBlock::keybind_presses`).
@@ -526,6 +536,15 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 AccountAction::SignIn => qq::Command::SignIn,
                 AccountAction::SignOut => qq::Command::SignOut,
                 AccountAction::Check => qq::Command::Start,
+            });
+        }
+        if let Some(action) = config.accounts.bilibili.take()
+            && let Some(player) = start_bilibili(&mut bilibili, &stage, &config)
+        {
+            let _ = player.command(&match action {
+                AccountAction::SignIn => bilibili::Command::SignIn,
+                AccountAction::SignOut => bilibili::Command::SignOut,
+                AccountAction::Check => bilibili::Command::Start,
             });
         }
 
@@ -641,6 +660,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 }
                 if let Some(player) = &qq {
                     profiles.push((performance::Profile::Qq, player.view().environment()));
+                }
+                if let Some(player) = &bilibili {
+                    profiles.push((performance::Profile::Bilibili, player.view().environment()));
                 }
                 let sample = status.game_connected.then(|| performance::Sample {
                     game_frames: plugin.heartbeat.load(Ordering::Relaxed),
@@ -832,6 +854,14 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                             let _ = webview.post_json(playback);
                         }
                     }
+                    if bilibili.is_some() {
+                        let signing_in = bilibili_window_open || bilibili_confirming;
+                        let message = bilibili::state_message(bilibili_state.as_ref(), signing_in);
+                        let _ = webview.post_json(&message);
+                        if let Some(playback) = &bilibili_playback {
+                            let _ = webview.post_json(playback);
+                        }
+                    }
                     let _ = webview.post_json(&settings_message(&config.settings.get()));
                     if let Some(message) = &customize_message {
                         let _ = webview.post_json(message);
@@ -934,6 +964,13 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                     if qq.is_none() && matches!(command, qq::Command::Pause) {
                         // Nothing to pause: QQ Music isn't running.
                     } else if let Some(player) = start_qq(&mut qq, &stage, &config) {
+                        let _ = player.command(&command);
+                    }
+                }
+                Some(PageMessage::Bilibili { command }) => {
+                    if bilibili.is_none() && matches!(command, bilibili::Command::Pause) {
+                        // Nothing to pause: Bilibili isn't running.
+                    } else if let Some(player) = start_bilibili(&mut bilibili, &stage, &config) {
                         let _ = player.command(&command);
                     }
                 }
@@ -1594,6 +1631,81 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
             }
         }
 
+
+
+        // Bilibili's page, heard from (signed in or not, what plays), and its sign-in window: the page hears
+        // whether it's signed in and what plays; a failed browser is closed, and the page opens it again.
+        if let Some(player) = &bilibili {
+            if player.failed() || players_closing {
+                if players_closing {
+                    log!("[bilibili] closed with the game");
+                } else {
+                    log!("[bilibili] its browser failed: closed, the page opens it again");
+                }
+                if let Some(line) = bilibili_log.heard(None) {
+                    log!("{line}");
+                }
+                if let Some(failed) = bilibili.take() {
+                    failed.close(&stage);
+                }
+                bilibili_state = None;
+                bilibili_playback = None;
+                (bilibili_window_open, bilibili_confirming) = (false, false);
+                status.bilibili_signed_in = None;
+                status.bilibili_signing_in = false;
+                (config.on_status)(&status);
+                let _ = webview.post_json(&bilibili::state_message(None, false));
+                let _ = webview.post_json(&bilibili::playback_message(None));
+            } else {
+                let mut state_changed = false;
+                for report in player.take_reports() {
+                    match report {
+                        bilibili::Report::State(state) => {
+                            if status.bilibili_signed_in != Some(state.signed_in) {
+                                status.bilibili_signed_in = Some(state.signed_in);
+                                (config.on_status)(&status);
+                            }
+                            bilibili_state = Some(state);
+                            state_changed = true;
+                        }
+                        bilibili::Report::SignInWindow(open) => {
+                            bilibili_window_open = open;
+                            state_changed = true;
+                        }
+                        bilibili::Report::Confirming(confirming) => {
+                            bilibili_confirming = confirming;
+                            state_changed = true;
+                        }
+                        bilibili::Report::Answer(answer) => {
+                            let _ = webview.post_json(&bilibili::answer_message(&answer));
+                        }
+                        bilibili::Report::Playback(playback) => {
+                            let heard = playback.as_deref().map(|playback| play_log::Heard {
+                                doing: play_log::doing(false, playback.playing),
+                                track: playback.track.as_ref().map(|track| track.id.as_str()),
+                                position: playback.position_ms / 1000.0,
+                            });
+                            if let Some(line) = bilibili_log.heard(heard) {
+                                log!("{line}");
+                            }
+                            let message = bilibili::playback_message(playback.as_deref());
+                            let _ = webview.post_json(&message);
+                            bilibili_playback = Some(message);
+                        }
+                    }
+                }
+                if state_changed {
+                    let signing_in = bilibili_window_open || bilibili_confirming;
+                    if status.bilibili_signing_in != signing_in {
+                        status.bilibili_signing_in = signing_in;
+                        (config.on_status)(&status);
+                    }
+                    let message = bilibili::state_message(bilibili_state.as_ref(), signing_in);
+                    let _ = webview.post_json(&message);
+                }
+            }
+        }
+
         // What the player typed on their own keyboard, and whether it types (the plugin decides: the truck
         // standing still, a field selected then).
         let typing_block = &bridge.bridge().typing;
@@ -2109,6 +2221,26 @@ fn start_qq<'a>(qq: &'a mut Option<qq::Qq>, stage: &Stage, config: &Config) -> O
     qq.as_ref()
 }
 
+/// Bilibili's page, started as the page first shows it (on a WebView2 profile of its own), or `None` if it
+/// couldn't start.
+fn start_bilibili<'a>(
+    bilibili: &'a mut Option<bilibili::Bilibili>,
+    stage: &Stage,
+    config: &Config,
+) -> Option<&'a bilibili::Bilibili> {
+    if bilibili.is_none() {
+        let user_data = config.data_dir.join("webview2-bilibili");
+        match bilibili::Bilibili::start(stage, config.width, config.height, &user_data) {
+            Ok(started) => {
+                log!("[bilibili] opened");
+                *bilibili = Some(started)
+            }
+            Err(e) => startup::mark(&format!("host: Bilibili couldn't start: {e}")),
+        }
+    }
+    bilibili.as_ref()
+}
+
 fn build_pipeline(
     config: &Config,
     stage: &Stage,
@@ -2204,6 +2336,8 @@ enum PageMessage {
     Netease { command: netease::Command },
     /// A command for QQ Music's web player (`qq`): its sign-in, a question, its controls.
     Qq { command: qq::Command },
+    /// A command for Bilibili's page (`bilibili`): its sign-in, a question, its controls.
+    Bilibili { command: bilibili::Command },
     /// The text field selected on the page, a number that changes with every selection (0: none), for the
     /// player's own keyboard to type into (`typing`).
     Typing { selection: u32 },
@@ -2432,6 +2566,12 @@ mod tests {
             parse_page_message(r#"{"type":"qq","command":{"action":"play","song":"0039MnYb0qxYhV"}}"#),
             Some(PageMessage::Qq { command: crate::qq::Command::Play { song: Some("0039MnYb0qxYhV".into()), playlist: None } })
         );
+        assert_eq!(
+            parse_page_message(r#"{"type":"bilibili","command":{"action":"play","song":"BV1BDk2YCEHF"}}"#),
+            Some(PageMessage::Bilibili {
+                command: crate::bilibili::Command::Play { song: Some("BV1BDk2YCEHF".into()), playlist: None }
+            })
+        );
         assert_eq!(parse_page_message(r#"{"type":"other"}"#), None);
         assert_eq!(parse_page_message("not json"), None);
     }
@@ -2527,6 +2667,9 @@ mod tests {
         requests.qq.request(AccountAction::SignIn);
         assert_eq!(requests.qq.take(), Some(AccountAction::SignIn));
         assert_eq!(requests.qq.take(), None);
+        requests.bilibili.request(AccountAction::Check);
+        assert_eq!(requests.bilibili.take(), Some(AccountAction::Check));
+        assert_eq!(requests.bilibili.take(), None);
         // The companion hears whether YouTube is signed in, and nothing more of the account.
         let status = super::Status { youtube_signed_in: Some(true), youtube_signing_in: false, ..Default::default() };
         let json = serde_json::to_value(&status).unwrap();
@@ -2547,6 +2690,10 @@ mod tests {
         let json = serde_json::to_value(&status).unwrap();
         let qq = (json["qqSignedIn"].as_bool(), json["qqSigningIn"].as_bool());
         assert_eq!(qq, (Some(true), Some(false)));
+        let status = super::Status { bilibili_signed_in: Some(false), bilibili_signing_in: true, ..Default::default() };
+        let json = serde_json::to_value(&status).unwrap();
+        let bilibili = (json["bilibiliSignedIn"].as_bool(), json["bilibiliSigningIn"].as_bool());
+        assert_eq!(bilibili, (Some(false), Some(true)));
     }
 
     #[test]

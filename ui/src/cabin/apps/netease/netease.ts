@@ -52,7 +52,7 @@ export type Question = NeteaseQuestion
 export type Answers = NeteaseAnswers
 export type Repeat = NeteaseRepeat
 
-export type Source = 'netease' | 'qq'
+export type Source = 'netease' | 'qq' | 'bilibili'
 
 export type Tab = 'home' | 'search' | 'mine'
 /** The tabs of the bottom bar, in its order (Search is the top bar's, as NetEase's app has it). */
@@ -141,7 +141,10 @@ export const useNetease = create<NeteaseState>()(
 
 /** A command for the service shown (nothing happens in a plain browser preview). */
 export function netease(command: NeteaseCommand): void {
-  postToHost(useNetease.getState().source === 'qq' ? { type: 'qq', command } : { type: 'netease', command })
+  const source = useNetease.getState().source
+  postToHost(
+    source === 'qq' ? { type: 'qq', command } : source === 'bilibili' ? { type: 'bilibili', command } : { type: 'netease', command },
+  )
 }
 
 // --- The account -------------------------------------------------------------------------------------------

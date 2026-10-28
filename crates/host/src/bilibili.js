@@ -207,6 +207,12 @@
     if (!response.ok) throw new Error(`audio ${response.status}`)
     const objectURL = URL.createObjectURL(await response.blob())
     blobs.set(url, objectURL)
+    // Three songs kept: enough to go back and forth, never a whole session's (a FLAC is tens of MB).
+    if (blobs.size > 3) {
+      const [oldest, object] = blobs.entries().next().value
+      URL.revokeObjectURL(object)
+      blobs.delete(oldest)
+    }
     return objectURL
   }
   // A video's sound: the blob when it can be had (the truck's speakers take it), the CDN's own address when not

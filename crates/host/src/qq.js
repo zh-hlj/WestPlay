@@ -279,7 +279,7 @@
     const sections = []
     try {
       const answer = await getJSON(
-        `https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg?cid=205360956&userid=${encodeURIComponent(uid)}&reqtype=3&sin=0&size=100&g_tk=5381&format=json&inCharset=utf8&outCharset=utf-8&notice=0&platform=yqq.json&needNewCode=0`,
+        `https://c.y.qq.com/fav/fcgi-bin/fcg_get_profile_order_asset.fcg?ct=20&cid=205360956&userid=${encodeURIComponent(uid)}&reqtype=3&sin=0&ein=99&format=json&utf8=1&g_tk=5381&platform=yqq.json&needNewCode=0`,
       )
       const lists = [...(answer?.data?.cdlist ?? []), ...(answer?.data?.disslist ?? [])].map(playlistOf).filter(Boolean)
       if (lists.length) sections.push({ title: '我的歌单', items: lists })

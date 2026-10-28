@@ -7,7 +7,7 @@
 //! fetches the audio's bytes itself (this profile's browser has CORS off) and plays them as a blob, so the
 //! truck's speakers take its sound as the other services' (cab_sound.js).
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::Path;
 
 pub use crate::netease::State;
@@ -29,6 +29,15 @@ const CORS_OFF: &str = "--disable-web-security";
 pub enum Command {
     /// Run (hidden), saying whether it's signed in: the Bilibili source is open.
     Start,
+    /// The app's video area (frame pixels): the page's picture shows there, under the cabin page.
+    VideoShow {
+        x: f32,
+        y: f32,
+        width: u32,
+        height: u32,
+    },
+    /// Show no video (its sound plays on).
+    VideoHide,
     /// Its sign-in, in a window on the desktop (a QR code to scan, as its page has it).
     SignIn,
     /// Forgets its cookies: its page starts signed out.
@@ -98,6 +107,8 @@ pub struct Bilibili {
     unanswered: RefCell<Vec<(u32, String)>>,
     /// What the page was told of the cab, sent again when it loads anew.
     told: RefCell<Told>,
+    /// The frame's size (device pixels), to keep the video area in it.
+    frame: Cell<(u32, u32)>,
 }
 
 /// What the host tells Bilibili's page of the cab (never the cabin page's to send): the truck's speakers (`None`:
@@ -159,6 +170,7 @@ impl Bilibili {
             pending: RefCell::new(Vec::new()),
             unanswered: RefCell::new(Vec::new()),
             told: RefCell::default(),
+            frame: Cell::new((width, height)),
         })
     }
 
@@ -171,6 +183,22 @@ impl Bilibili {
     pub fn command(&self, command: &Command) -> windows::core::Result<()> {
         match command {
             Command::Start => Ok(()),
+            Command::VideoShow {
+                x,
+                y,
+                width,
+                height,
+            } => {
+                // The app's rectangle, kept in the frame (a video area at its edge).
+                let (frame_width, frame_height) = self.frame.get();
+                let x = x.max(0.0).min(frame_width as f32);
+                let y = y.max(0.0).min(frame_height as f32);
+                let width = (*width).min(frame_width.saturating_sub(x as u32)).max(1);
+                let height = (*height).min(frame_height.saturating_sub(y as u32)).max(1);
+                self.view.place(x, y, width, height)?;
+                self.view.show(true)
+            }
+            Command::VideoHide => self.view.show(false),
             Command::SignOut => {
                 self.view.delete_cookies()?;
                 self.view.navigate(HOME)

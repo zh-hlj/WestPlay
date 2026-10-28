@@ -886,8 +886,11 @@ export type NeteaseRepeat = 'off' | 'all' | 'one'
 /** QQ Music's commands: the same actions as NetEase Cloud Music's. */
 export type QqCommand = NeteaseCommand
 
-/** Bilibili's commands: the same actions as NetEase Cloud Music's. */
-export type BilibiliCommand = NeteaseCommand
+/** Bilibili's commands: the same actions as NetEase Cloud Music's, and its video area (frame pixels). */
+export type BilibiliCommand =
+  | NeteaseCommand
+  | { action: 'videoShow'; x: number; y: number; width: number; height: number }
+  | { action: 'videoHide' }
 
 /** What a card or a row is: a song, a playlist, an album, an artist (or a radio). */
 export type NeteaseKind = 'song' | 'playlist' | 'album' | 'artist' | 'radio'

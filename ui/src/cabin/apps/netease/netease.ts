@@ -214,6 +214,13 @@ export const useAsked = asking.useAsked
 export const receiveAnswer = asking.receive
 
 /** The service switched: nothing of the other one is kept (its answers asked again, for the other). */
+/** Bilibili's video area (frame pixels), where its page's picture shows under the cabin page; or no video. */
+export function bilibiliVideo(
+  command: { action: 'videoShow'; x: number; y: number; width: number; height: number } | { action: 'videoHide' },
+): void {
+  if (isInHost()) postToHost({ type: 'bilibili', command })
+}
+
 export function setSource(source: Source): void {
   if (useNetease.getState().source === source) return
   // The service left stops: two services playing at once (each is its own app now) is never wanted.

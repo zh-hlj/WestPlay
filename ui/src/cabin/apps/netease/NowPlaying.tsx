@@ -11,6 +11,7 @@ import {
   ShuffleGlyph,
   VolumeGlyph,
 } from './glyphs'
+import { BilibiliVideoHole } from './bilibiliVideo'
 import { Cover, Failed } from './parts'
 import {
   type Playback,
@@ -198,6 +199,7 @@ export function NowPlaying() {
   const text = useText()
   const open = useNetease((state) => state.nowPlaying)
   const playback = useNetease((state) => state.playback)
+  const source = useNetease((state) => state.source)
   const lyricsOpen = useNetease((state) => state.lyrics)
   if (!open || !playback) return null
   const words = text.netease
@@ -223,8 +225,12 @@ export function NowPlaying() {
         </button>
       </header>
       <div className="ne-now-main">
-        <div key={track.id} className={`ne-now-art${playback.direction === -1 ? ' back' : ''}`}>
-          <Cover name={track.name} image={track.image} className="ne-now-cover" />
+        <div key={track.id} className={`ne-now-art${playback.direction === -1 ? ' back' : ''}${source === 'bilibili' ? ' bili' : ''}`}>
+          {source === 'bilibili' ? (
+            <BilibiliVideoHole className="ne-now-cover bili-video-hole" />
+          ) : (
+            <Cover name={track.name} image={track.image} className="ne-now-cover" />
+          )}
         </div>
         <div className="ne-now-song">
           <h1 className="ne-now-name">{track.name}</h1>

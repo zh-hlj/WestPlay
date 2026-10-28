@@ -1231,3 +1231,14 @@
 .ne-sources .ne-pill.on {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* Bilibili's video in its Now Playing: Bilibili's page picture under the page, where this is cut open (a
+   BilibiliVideoHole): only the picture, rounded as the cover. */
+.shell .ne-now-art.bili {
+  background: transparent;
+}
+.shell .ne-now-cover.bili-video-hole {
+  display: block;
+  background: transparent;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.5);
+}

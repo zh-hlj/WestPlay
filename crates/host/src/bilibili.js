@@ -125,8 +125,17 @@
     )
     const audios = answer?.data?.dash?.audio ?? []
     const best = audios.slice().sort((a, b) => Number(b?.id ?? 0) - Number(a?.id ?? 0))[0]
-    const urls = [best?.baseUrl, ...(best?.backupUrl ?? [])].map(https).filter(Boolean)
-    return urls
+    const audio = [best?.baseUrl, ...(best?.backupUrl ?? [])].map(https).filter(Boolean)
+    // The picture (DASH, video only: the sound is the element above): the best up to 720P, the lighter default.
+    const videos = (answer?.data?.dash?.video ?? [])
+      .slice()
+      .sort((a, b) => Number(a?.height ?? 0) - Number(b?.height ?? 0))
+    // The best up to 720P (lighter than 1080P on the truck's screen), else the smallest.
+    const light = videos.filter((one) => Number(one?.height ?? 0) <= 720)
+    const chosen = light.at(-1) ?? videos.at(-1)
+    const picture = chosen?.baseUrl
+    const video = [picture, ...(chosen?.backupUrl ?? [])].map(https).filter(Boolean)
+    return { audio, video }
   }
   const collection = async ({ id }) => {
     if (id.startsWith('BV')) {
@@ -218,6 +227,43 @@
   // A video's sound: the blob when it can be had (the truck's speakers take it), the CDN's own address when not
   // (no 3D sound, but the sound plays).
   const sourceOf = (url) => blobOf(url).catch(() => url)
+  // The video itself: Bilibili's page shows it full page (its own interface hidden), the host placing the page
+  // under the cabin page's video area. Muted: its sound is the element the truck's speakers take.
+  let picture = null
+  const hidePageUi = () => {
+    if (document.getElementById('westplay-bilibili-style')) return
+    const style = document.createElement('style')
+    style.id = 'westplay-bilibili-style'
+    style.textContent =
+      'body > *:not(#westplay-bilibili-video){visibility:hidden!important}' +
+      '#westplay-bilibili-video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:2147483647}'
+    document.documentElement.appendChild(style)
+  }
+  const syncPicture = () => {
+    if (!picture || !element || !picture.src) return
+    try {
+      if (Math.abs((picture.currentTime || 0) - (element.currentTime || 0)) > 0.5) picture.currentTime = element.currentTime
+      if (element.paused && !picture.paused) picture.pause()
+      else if (!element.paused && picture.paused) picture.play().catch(() => {})
+    } catch {
+      // The picture's own.
+    }
+  }
+  const showPicture = async (src) => {
+    if (!src) return
+    hidePageUi()
+    if (!picture) {
+      picture = document.createElement('video')
+      picture.id = 'westplay-bilibili-video'
+      picture.muted = true
+      picture.playsInline = true
+      picture.preload = 'auto'
+      document.documentElement.appendChild(picture)
+    }
+    if (picture.src !== src) picture.src = src
+    await picture.play().catch((e) => debug(`picture play failed ${String(e).slice(0, 60)}`))
+    syncPicture()
+  }
   const playOne = async (track, index, playlist) => {
     try {
       let cid = cidOf.get(track.id)
@@ -228,8 +274,8 @@
         cidOf.set(track.id, cid)
         if (found.track) Object.assign(track, found.track)
       }
-      const urls = await playUrl(track.id, cid)
-      const url = urls[0]
+      const media = await playUrl(track.id, cid)
+      const url = media.audio[0]
       if (!url) {
         debug(`playurl empty bvid=${track.id}`)
         return false
@@ -242,6 +288,7 @@
       audio.volume = volumeWanted ?? 0.8
       audio.src = await sourceOf(url)
       await audio.play().catch((e) => debug(`audio play failed ${String(e).slice(0, 80)}`))
+      await showPicture(media.video[0])
       tellPlayback()
       tellState(true)
       return true
@@ -353,11 +400,13 @@
     },
     pause: () => {
       if (element && !element.paused) element.pause()
+      if (picture && !picture.paused) picture.pause()
       tellPlayback()
       tellState(true)
     },
     resume: () => {
       if (element?.paused) element.play().catch(() => {})
+      if (picture?.paused) picture.play().catch(() => {})
       tellPlayback()
       tellState(true)
     },
@@ -366,6 +415,7 @@
     seek: ({ seconds }) => {
       if (!element) return
       element.currentTime = Math.max(0, Number(seconds) || 0)
+      if (picture) picture.currentTime = element.currentTime
       tellPlayback()
     },
     volume: ({ percent }) => {
@@ -412,6 +462,7 @@
     refreshAccount().finally(() => {
       tellState()
       tellPlayback()
+      syncPicture()
       setTimeout(poll, 900)
     })
   }

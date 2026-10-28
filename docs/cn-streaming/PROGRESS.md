@@ -159,3 +159,11 @@
 - 仪表盘 Now Playing 打开当前音乐所属的 App（netease/qq/bilibili），不再总是网易云。
 - companion 账号页 QQ/哔哩哔哩使用自己的 AppId 与光效（GLOW.qq / GLOW.bilibili）。
 - 校验：tsc 0 错误；vitest 451 passed。
+
+## 2026-10-28 · 里程碑 17：哔哩哔哩视频画面
+
+- 用户指出「哔哩哔哩主要是视频平台」：B 站 App 的 Now Playing 现在显示**视频画面**。
+- host `bilibili.rs` 加 `VideoShow/VideoHide`（`view.place` + `show`，clamp 到 frame），页面 `bilibili.js` 取 DASH 视频（≤720P）建立全页静音 `<video>`，隐藏 B 站页面 UI；音频仍走 blob + cab 3D，画面与音频每 900ms 同步。
+- UI：`bilibiliVideo.tsx` 的 `BilibiliVideoHole` 测量 NowPlaying 封面区域，通知 host 放置并在 Shell 的 hole mask 上开洞；NowPlaying 在 B 站源时用视频洞替代封面。
+- 校验：tsc 0；vitest 451 passed；npm build 通过；host 212 passed / 0 failed；node --check 通过。
+- 待构建 preview14 与真机验证（视频是否显示、同步、B 站 anti-leech）。

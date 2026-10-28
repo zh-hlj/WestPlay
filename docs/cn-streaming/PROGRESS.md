@@ -39,3 +39,12 @@
 - `webview.rs`：新增 `OffscreenWebView::new_with_arguments`，每个 WebView 可带自己的 Chromium 参数（QQ 用 `--disable-web-security` 读跨域接口，只影响 QQ 自己的 profile）；`cargo check -p westplay-host` 通过。
 - QQ 设计文档：`docs/cn-streaming/QQ.md`（架构/接口/登录/风险/步骤，接口与签名算法取自 Mineradio-paused）。
 - 下一步：`qq.rs` + `qq.js` + 登录窗口 + UI 组件。
+
+## 2026-10-28 · 里程碑 3b：QQ 音乐 host 核心
+
+- 新增 `crates/host/src/qq.js`（y.qq.com 页面脚本：搜索/签名、歌曲详情、vkey 播放、歌单/歌词/我的歌单、自有 `<audio>` 播放、列表循环/随机/下一首、与 host 的消息协议）。
+- 新增 `crates/host/src/qq.rs`（Qq 服务：隐藏 WebView + `--disable-web-security` 独占 profile、登录窗口、Command 路由、问题/回答/状态/播放报告、单测 5/5）。
+- `signin.rs` 加 `QQMUSIC` Site + `qq_sign_in.js`（扫码登录检测）。
+- `qq.rs` 复用 `netease.rs` 的 `Item/Track/Question/Answer/Playback/State` 等数据形状：UI 后续用同一套音乐组件、加“网易云/QQ音乐”切换。
+- 验证：`cargo test -p westplay-host --lib qq::` 5/5；`node --check qq.js`、`qq_sign_in.js` 通过。
+- 下一步：lib.rs 接线（两个服务、source 路由、状态/命令）、app 命令、companion 账号行、UI 源切换。

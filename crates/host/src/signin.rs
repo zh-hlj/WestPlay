@@ -109,6 +109,17 @@ pub const NETEASE: Site = Site {
     not_yet: None,
     page_says: Some(include_str!("netease_sign_in.js")),
 };
+
+/// QQ Music's sign-in: its own web player, where signing in is a dialog of the page (a QR code, scanned with the
+/// QQ Music app), so its address stays its home and the page's own script says when it's done
+/// (`qq_sign_in.js`, `page_says`).
+pub const QQMUSIC: Site = Site {
+    sign_in: "https://y.qq.com/",
+    title: "Sign in to QQ Music - WestPlay",
+    home: "https://y.qq.com/",
+    not_yet: None,
+    page_says: Some(include_str!("qq_sign_in.js")),
+};
 const CLASS: windows::core::PCWSTR = w!("WestPlaySignIn");
 const SIZE: (i32, i32) = (520, 760);
 /// Windows' message for the mouse leaving a window that asked to be told (its value, from WinUser.h).

@@ -122,7 +122,7 @@ pub enum Question {
 
 impl Question {
     /// Whether it's a question for NetEase's page: ids of the shape NetEase's have, and a search that is one.
-    fn is_sound(&self) -> bool {
+    pub(crate) fn is_sound(&self) -> bool {
         match self {
             Question::Home => true,
             Question::Search { query } => (1..=200).contains(&query.chars().count()),

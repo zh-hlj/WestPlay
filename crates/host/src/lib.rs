@@ -19,6 +19,7 @@ mod handover;
 mod lyrics;
 pub mod maps;
 mod netease;
+mod qq;
 mod performance;
 mod planner;
 mod play_log;

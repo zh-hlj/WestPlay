@@ -67,3 +67,20 @@
 2. 真机回归三服务并取日志修细节
 3. 可选：B 站视频画面（仿 YouTube Show/Hide 合成）、Blob 流式播放优化
 4. 最终稳定 Release（脱离 preview 标签）+ 使用说明
+
+## 8. 本机自测记录（2026-10-28，preview13）
+
+| 检查 | 结果 |
+| --- | --- |
+| UI `tsc -b` | 0 错误 |
+| UI `vitest run` | 64 文件 / 451 tests passed |
+| UI `npm run build` | 通过 |
+| host `cargo test -p westplay-host --lib` | 212 passed / 0 failed |
+| CI preview11/12/13（MSVC） | success |
+| Release SHA256 | 安装包/便携包全部 match |
+| 签名 | 便携 exe、安装包、安装包内嵌 exe = CN=WestPlay CN Streaming Preview |
+| 哔哩哔哩 Blob + Web Audio（headless） | fetch 200，blob 2.4 MB，ready 4，currentTime 前进，分析器电平 0.0616 |
+| Home（cabin demo 截图） | NetEase Cloud Music / QQ Music / Bilibili 三个独立图标 |
+| 原版 YouTube / AppleMusic / Spotify 回归 | 未做（需真机） |
+
+> 上游同步：2026-10-28 检查 `origin/main` 仍为 `de6e887`（v2.1.3）；当次 `git fetch` 网络握手失败，使用已缓存的 origin/main 引用，稍后重试。

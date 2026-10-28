@@ -117,3 +117,10 @@
 - QQ：登录判定不再要求读 HttpOnly 的 qm_keyst（资料接口/uin cookie 即可），登录窗口检测加页面头像兜底。
 - CI：构建 app 二进制后先签名，再交给 NSIS 打包（让安装后的 westplay.exe 也带签名）。
 - 待构建验证：签名是否保留、三源运行。
+
+## 2026-10-28 · 里程碑 11：三源修复 + 签名回退（preview8）
+
+- 修复 B 站条目 kind（video→song）、QQ 登录判定（不再依赖 HttpOnly qm_keyst）。
+- 内嵌 exe 签名尝试失败：先签 app 再 `tauri build` 会被重链接覆盖；`tauri bundle` 后内嵌 exe 签名 HashMismatch（Tauri 打包改动了 exe）→ 已撤回，preview7 删除；preview8 恢复单次构建 + 安装包/便携 exe 签名。
+- 结论：安装后 exe 签名需 Tauri `bundle.windows.signCommand`（在打包时签）或付费证书，属未完成项。
+- preview8 验证：SHA 全 match；portable exe 已签名；CI 成功。

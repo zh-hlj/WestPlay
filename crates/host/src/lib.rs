@@ -113,6 +113,9 @@ pub struct Status {
     /// window open.
     pub netease_signed_in: Option<bool>,
     pub netease_signing_in: bool,
+    /// The same of QQ Music: signed in or not (`None`: not known, it hasn't run yet), its sign-in window open.
+    pub qq_signed_in: Option<bool>,
+    pub qq_signing_in: bool,
     /// The map of the profile played: ready, being built, waiting for the game to close...
     pub map: maps::MapStatus,
     /// The map the cab shows: its folder in WestPlay's maps, and when it was built (the companion's
@@ -132,6 +135,7 @@ pub struct AccountRequests {
     pub spotify: AccountRequest,
     pub apple_music: AccountRequest,
     pub netease: AccountRequest,
+    pub qq: AccountRequest,
 }
 
 /// One service's request, the latest not carried out yet.
@@ -382,6 +386,7 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut apple_music_log = play_log::PlayLog::new("apple music");
     let mut youtube_music_log = play_log::PlayLog::new("youtube music");
     let mut netease_log = play_log::PlayLog::new("netease");
+    let mut qq_log = play_log::PlayLog::new("qq");
     // Spotify's web player, while the page uses it, and what it last said (sent again when the page reloads):
     // signed in or not, and what plays.
     let mut spotify: Option<spotify::Spotify> = None;
@@ -406,6 +411,11 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
     let mut netease_state: Option<netease::State> = None;
     let (mut netease_window_open, mut netease_confirming) = (false, false);
     let mut netease_playback: Option<String> = None;
+    // QQ Music's web player, the same way (on its own WebView2 profile; its page reads the API with CORS off).
+    let mut qq: Option<qq::Qq> = None;
+    let mut qq_state: Option<qq::State> = None;
+    let (mut qq_window_open, mut qq_confirming) = (false, false);
+    let mut qq_playback: Option<String> = None;
     // The settings generation last applied (`None`: apply them once at startup).
     let mut applied_settings = None;
     // Each keybind's presses the page was told of (`PluginBlock::keybind_presses`).
@@ -506,6 +516,15 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 AccountAction::SignIn => netease::Command::SignIn,
                 AccountAction::SignOut => netease::Command::SignOut,
                 AccountAction::Check => netease::Command::Start,
+            });
+        }
+        if let Some(action) = config.accounts.qq.take()
+            && let Some(player) = start_qq(&mut qq, &stage, &config)
+        {
+            let _ = player.command(&match action {
+                AccountAction::SignIn => qq::Command::SignIn,
+                AccountAction::SignOut => qq::Command::SignOut,
+                AccountAction::Check => qq::Command::Start,
             });
         }
 
@@ -618,6 +637,9 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 }
                 if let Some(netease) = &netease {
                     profiles.push((performance::Profile::Netease, netease.view().environment()));
+                }
+                if let Some(player) = &qq {
+                    profiles.push((performance::Profile::Qq, player.view().environment()));
                 }
                 let sample = status.game_connected.then(|| performance::Sample {
                     game_frames: plugin.heartbeat.load(Ordering::Relaxed),
@@ -801,6 +823,14 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                             let _ = webview.post_json(playback);
                         }
                     }
+                    if qq.is_some() {
+                        let signing_in = qq_window_open || qq_confirming;
+                        let message = qq::state_message(qq_state.as_ref(), signing_in);
+                        let _ = webview.post_json(&message);
+                        if let Some(playback) = &qq_playback {
+                            let _ = webview.post_json(playback);
+                        }
+                    }
                     let _ = webview.post_json(&settings_message(&config.settings.get()));
                     if let Some(message) = &customize_message {
                         let _ = webview.post_json(message);
@@ -896,6 +926,13 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                     if netease.is_none() && matches!(command, netease::Command::Pause) {
                         // Nothing to pause: NetEase Cloud Music isn't running.
                     } else if let Some(player) = start_netease(&mut netease, &stage, &config) {
+                        let _ = player.command(&command);
+                    }
+                }
+                Some(PageMessage::Qq { command }) => {
+                    if qq.is_none() && matches!(command, qq::Command::Pause) {
+                        // Nothing to pause: QQ Music isn't running.
+                    } else if let Some(player) = start_qq(&mut qq, &stage, &config) {
                         let _ = player.command(&command);
                     }
                 }
@@ -1483,6 +1520,78 @@ pub fn run(mut config: Config, stop: Arc<AtomicBool>) -> Result<(), Error> {
                 }
             }
         }
+        // QQ Music's page, heard from (signed in or not, what plays), and its sign-in window: the page hears
+        // whether it's signed in and what plays; a failed browser is closed, and the page opens it again.
+        if let Some(player) = &qq {
+            if player.failed() || players_closing {
+                if players_closing {
+                    log!("[qq] closed with the game");
+                } else {
+                    log!("[qq] its browser failed: closed, the page opens it again");
+                }
+                if let Some(line) = qq_log.heard(None) {
+                    log!("{line}");
+                }
+                if let Some(failed) = qq.take() {
+                    failed.close(&stage);
+                }
+                qq_state = None;
+                qq_playback = None;
+                (qq_window_open, qq_confirming) = (false, false);
+                status.qq_signed_in = None;
+                status.qq_signing_in = false;
+                (config.on_status)(&status);
+                let _ = webview.post_json(&qq::state_message(None, false));
+                let _ = webview.post_json(&qq::playback_message(None));
+            } else {
+                let mut state_changed = false;
+                for report in player.take_reports() {
+                    match report {
+                        qq::Report::State(state) => {
+                            if status.qq_signed_in != Some(state.signed_in) {
+                                status.qq_signed_in = Some(state.signed_in);
+                                (config.on_status)(&status);
+                            }
+                            qq_state = Some(state);
+                            state_changed = true;
+                        }
+                        qq::Report::SignInWindow(open) => {
+                            qq_window_open = open;
+                            state_changed = true;
+                        }
+                        qq::Report::Confirming(confirming) => {
+                            qq_confirming = confirming;
+                            state_changed = true;
+                        }
+                        qq::Report::Answer(answer) => {
+                            let _ = webview.post_json(&qq::answer_message(&answer));
+                        }
+                        qq::Report::Playback(playback) => {
+                            let heard = playback.as_deref().map(|playback| play_log::Heard {
+                                doing: play_log::doing(false, playback.playing),
+                                track: playback.track.as_ref().map(|track| track.id.as_str()),
+                                position: playback.position_ms / 1000.0,
+                            });
+                            if let Some(line) = qq_log.heard(heard) {
+                                log!("{line}");
+                            }
+                            let message = qq::playback_message(playback.as_deref());
+                            let _ = webview.post_json(&message);
+                            qq_playback = Some(message);
+                        }
+                    }
+                }
+                if state_changed {
+                    let signing_in = qq_window_open || qq_confirming;
+                    if status.qq_signing_in != signing_in {
+                        status.qq_signing_in = signing_in;
+                        (config.on_status)(&status);
+                    }
+                    let message = qq::state_message(qq_state.as_ref(), signing_in);
+                    let _ = webview.post_json(&message);
+                }
+            }
+        }
 
         // What the player typed on their own keyboard, and whether it types (the plugin decides: the truck
         // standing still, a field selected then).
@@ -1983,6 +2092,22 @@ fn start_netease<'a>(
     netease.as_ref()
 }
 
+/// QQ Music's web player, started as the page first shows it (on a WebView2 profile of its own: signing out of
+/// QQ Music forgets nothing else), or `None` if it couldn't start.
+fn start_qq<'a>(qq: &'a mut Option<qq::Qq>, stage: &Stage, config: &Config) -> Option<&'a qq::Qq> {
+    if qq.is_none() {
+        let user_data = config.data_dir.join("webview2-qq");
+        match qq::Qq::start(stage, config.width, config.height, &user_data) {
+            Ok(started) => {
+                log!("[qq] opened");
+                *qq = Some(started)
+            }
+            Err(e) => startup::mark(&format!("host: QQ Music couldn't start: {e}")),
+        }
+    }
+    qq.as_ref()
+}
+
 fn build_pipeline(
     config: &Config,
     stage: &Stage,
@@ -2076,6 +2201,8 @@ enum PageMessage {
     YoutubeMusic { command: youtube_music::Command },
     /// A command for NetEase Cloud Music's web player (`netease`): its sign-in, a question, its controls.
     Netease { command: netease::Command },
+    /// A command for QQ Music's web player (`qq`): its sign-in, a question, its controls.
+    Qq { command: qq::Command },
     /// The text field selected on the page, a number that changes with every selection (0: none), for the
     /// player's own keyboard to type into (`typing`).
     Typing { selection: u32 },
@@ -2300,6 +2427,10 @@ mod tests {
             parse_page_message(r#"{"type":"netease","command":{"action":"seek","seconds":42.5}}"#),
             Some(PageMessage::Netease { command: crate::netease::Command::Seek { seconds: 42.5 } })
         );
+        assert_eq!(
+            parse_page_message(r#"{"type":"qq","command":{"action":"play","song":"0039MnYb0qxYhV"}}"#),
+            Some(PageMessage::Qq { command: crate::qq::Command::Play { song: Some("0039MnYb0qxYhV".into()), playlist: None } })
+        );
         assert_eq!(parse_page_message(r#"{"type":"other"}"#), None);
         assert_eq!(parse_page_message("not json"), None);
     }
@@ -2392,6 +2523,9 @@ mod tests {
         requests.netease.request(AccountAction::Check);
         assert_eq!(requests.netease.take(), Some(AccountAction::Check));
         assert_eq!(requests.netease.take(), None);
+        requests.qq.request(AccountAction::SignIn);
+        assert_eq!(requests.qq.take(), Some(AccountAction::SignIn));
+        assert_eq!(requests.qq.take(), None);
         // The companion hears whether YouTube is signed in, and nothing more of the account.
         let status = super::Status { youtube_signed_in: Some(true), youtube_signing_in: false, ..Default::default() };
         let json = serde_json::to_value(&status).unwrap();
@@ -2408,6 +2542,10 @@ mod tests {
         let json = serde_json::to_value(&status).unwrap();
         let netease = (json["neteaseSignedIn"].as_bool(), json["neteaseSigningIn"].as_bool());
         assert_eq!(netease, (Some(false), Some(false)));
+        let status = super::Status { qq_signed_in: Some(true), qq_signing_in: false, ..Default::default() };
+        let json = serde_json::to_value(&status).unwrap();
+        let qq = (json["qqSignedIn"].as_bool(), json["qqSigningIn"].as_bool());
+        assert_eq!(qq, (Some(true), Some(false)));
     }
 
     #[test]

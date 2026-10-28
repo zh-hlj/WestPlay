@@ -48,3 +48,10 @@
 - `qq.rs` 复用 `netease.rs` 的 `Item/Track/Question/Answer/Playback/State` 等数据形状：UI 后续用同一套音乐组件、加“网易云/QQ音乐”切换。
 - 验证：`cargo test -p westplay-host --lib qq::` 5/5；`node --check qq.js`、`qq_sign_in.js` 通过。
 - 下一步：lib.rs 接线（两个服务、source 路由、状态/命令）、app 命令、companion 账号行、UI 源切换。
+
+## 2026-10-28 · 里程碑 3c：QQ 服务接入 host（编译级通过）
+
+- `lib.rs`：Status/AccountRequests 加 QQ 字段；`start_qq`；`PageMessage::Qq` 解析与分发；QQ 状态/回答/播放报告与关闭逻辑；性能统计 Profile::Qq。
+- `app/src/main.rs`：`qq_sign_in` / `qq_sign_out` / `qq_check` Tauri 命令注册。
+- 验证：`cargo test -p westplay-host --lib qq::` 5/5；`cargo check -p westplay-host` ✅；`cargo check -p westplay-app`（ASCII 源码副本）✅。
+- 下一步：UI——车内音乐 App 加「网易云 / QQ音乐」切换、companion 账号页 QQ 登录行、host.ts/媒体/图标/字符串；跑 tsc+vitest。

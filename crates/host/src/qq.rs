@@ -10,7 +10,8 @@
 use std::cell::RefCell;
 use std::path::Path;
 
-use crate::netease::{Answer, Playback, Question, Repeat, State};
+pub use crate::netease::State;
+use crate::netease::{Answer, Playback, Question, Repeat};
 use crate::signin::{self, Confirming, Progress, SignInWindow};
 use crate::webview::{self, OffscreenWebView, Stage};
 
@@ -108,6 +109,11 @@ impl Qq {
             pending: RefCell::new(Vec::new()),
             unanswered: RefCell::new(Vec::new()),
         })
+    }
+
+    /// Its WebView, for what needs it (the GPU it draws on, its profile).
+    pub fn view(&self) -> &OffscreenWebView {
+        &self.view
     }
 
     /// The app's command, for its page.

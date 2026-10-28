@@ -133,6 +133,25 @@ fn netease_check(accounts: State<Accounts>) {
     accounts.0.netease.request(AccountAction::Check);
 }
 
+/// Opens QQ Music's sign-in in a window on the desktop (a QR code, scanned with its phone app; the status
+/// then says when it's done).
+#[tauri::command]
+fn qq_sign_in(accounts: State<Accounts>) {
+    accounts.0.qq.request(AccountAction::SignIn);
+}
+
+/// Signs QQ Music out.
+#[tauri::command]
+fn qq_sign_out(accounts: State<Accounts>) {
+    accounts.0.qq.request(AccountAction::SignOut);
+}
+
+/// Runs QQ Music's web player (hidden), so the status says whether it's signed in.
+#[tauri::command]
+fn qq_check(accounts: State<Accounts>) {
+    accounts.0.qq.request(AccountAction::Check);
+}
+
 /// The maker's Kreosus page, where players support WestPlay's development.
 const SUPPORT_PAGE: &str = "https://kreosus.com/enes-less";
 
@@ -210,6 +229,9 @@ fn main() {
             netease_sign_in,
             netease_sign_out,
             netease_check,
+            qq_sign_in,
+            qq_sign_out,
+            qq_check,
             open_support_page,
             app_log_place,
             customize::customize_list,

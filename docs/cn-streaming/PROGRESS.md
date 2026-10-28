@@ -202,3 +202,9 @@
 - GitHub 仍不可达（push/API/CI 超时，连续第 3 轮）。
 - 本机成功用 GNU 工具链构建 release app + plugin，打包 `WestPlay-2.1.3-cn-local-20261028.zip`（40.8MB）作应急测试；未签名、GNU 链接有 manifest 警告，不替代 MSVC 正式包。
 - 完整 git bundle 与 PENDING 说明放 `westplay-deliverables/pending-2026-10-28/`。
+
+## 2026-10-28 · 里程碑 22：网络恢复，推送并构建 preview17
+
+- GitHub 恢复：已把 `a71dcc4` 及之前全部本地提交推送到 `feature/cn-streaming`；原版 `origin/main` 仍为 de6e887。
+- preview16 CI 成功（对应 7348c53）；本版 preview17 将包含之后的 B 站全屏进度条/洞交接/隐藏暂停/排行榜、网易云 CORS 探测修复、QQ vkey 修复。
+- 已下载/待下载 preview16 资产不单独发布；以 preview17 为准。

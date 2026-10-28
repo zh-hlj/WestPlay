@@ -163,7 +163,7 @@ jobs:
           start "" "%~dp0westplay.exe"
           endlocal
           "@ | Set-Content -LiteralPath "out/portable/启动(避让占用).bat" -Encoding utf8
-          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview16-portable.zip -Force
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview17-portable.zip -Force
 
       - name: Collect build outputs
         shell: pwsh
@@ -201,9 +201,9 @@ jobs:
           Copy-Item out/portable/WestPlay-Preview.cer out/
           Copy-Item -LiteralPath "out/portable/信任证书.bat" out/ -Force
           Copy-Item -LiteralPath "out/portable/信任证书.bat" out/Trust-Certificate.bat -Force
-          Remove-Item out/WestPlay-2.1.3-cn-preview16-portable.zip -Force -ErrorAction SilentlyContinue
-          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview16-portable.zip -Force
-          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.3-cn-preview16-portable.zip -Algorithm SHA256 |
+          Remove-Item out/WestPlay-2.1.3-cn-preview17-portable.zip -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path out/portable/* -DestinationPath out/WestPlay-2.1.3-cn-preview17-portable.zip -Force
+          Get-FileHash out/installer/*.exe, out/WestPlay-2.1.3-cn-preview17-portable.zip -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content out/SHA256SUMS.txt -Encoding ascii
 
       - name: Upload artifacts
@@ -212,7 +212,7 @@ jobs:
           name: westplay-windows-msvc
           path: |
             out/installer/*.exe
-            out/WestPlay-2.1.3-cn-preview16-portable.zip
+            out/WestPlay-2.1.3-cn-preview17-portable.zip
             out/WestPlay-Preview.cer
             out/Trust-Certificate.bat
             out/SHA256SUMS.txt
@@ -221,14 +221,14 @@ jobs:
       - name: Attach to the preview release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.1.3-cn-preview16
+          tag_name: v2.1.3-cn-preview17
           target_commitish: ${{ github.ref_name }}
           prerelease: true
           fail_on_unmatched_files: false
           overwrite_files: true
           files: |
             out/installer/*.exe
-            out/WestPlay-2.1.3-cn-preview16-portable.zip
+            out/WestPlay-2.1.3-cn-preview17-portable.zip
             out/WestPlay-Preview.cer
             out/Trust-Certificate.bat
             out/SHA256SUMS.txt

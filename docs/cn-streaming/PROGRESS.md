@@ -220,3 +220,9 @@
 - 用户 preview18 测试日志：`[qq] account signed in uin=no`（仍无 QQ uin）→ uin() 加 `wxuin` 回退；vkey debug 增加存在的 cookie 名（uin/wxuin/qlogin_uid/qm_keyst）。
 - companion QQ 行标注「播放需 QQ 账号」。
 - 校验：tsc 0；vitest 451；node --check 通过。
+
+## 2026-10-28 · 里程碑 25：B 站播放量元数据（preview20）
+
+- B 站 track 的 album 行显示「分区 · 12.3万播放」（榜单/热门有 stat，搜索结果用 play 文本）。
+- 用户尚未测试 preview19；QQ 微信登录 vkey 仍无解，已在 companion 提示「播放需 QQ 账号」。
+- 校验：node --check 通过；本版随 preview20 构建。

@@ -72,7 +72,7 @@
   const viewsOf = (video) => {
     const raw = video?.stat?.view ?? video?.play ?? video?.view ?? null
     if (raw == null || raw === '') return ''
-    if (typeof raw === 'string' && /[万��]/.test(raw)) return raw
+    if (typeof raw === 'string' && /[万亿]/.test(raw)) return raw
     const count = Number(raw)
     if (!Number.isFinite(count) || count <= 0) return ''
     if (count >= 100_000_000) return `${(count / 100_000_000).toFixed(1).replace(/\.0$/, '')}亿`

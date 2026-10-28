@@ -68,6 +68,17 @@
 
   // --- Bilibili's API, cut down to the app's shapes ------------------------------------------------------------
   const durationMs = (seconds) => Math.round((Number(seconds) || 0) * 1000)
+  // A play count as Bilibili's own app shows it (12.3万, 1.2亿): from the number or its own "12.3万" text.
+  const viewsOf = (video) => {
+    const raw = video?.stat?.view ?? video?.play ?? video?.view ?? null
+    if (raw == null || raw === '') return ''
+    if (typeof raw === 'string' && /[万��]/.test(raw)) return raw
+    const count = Number(raw)
+    if (!Number.isFinite(count) || count <= 0) return ''
+    if (count >= 100_000_000) return `${(count / 100_000_000).toFixed(1).replace(/\.0$/, '')}亿`
+    if (count >= 10_000) return `${(count / 10_000).toFixed(1).replace(/\.0$/, '')}万`
+    return String(count)
+  }
   const cover = (url) => https(url)
   const trackOf = (video) => {
     const bvid = video?.bvid ?? ''
@@ -77,7 +88,7 @@
       id: bvid,
       name,
       artists: [text(video?.owner?.name ?? video?.author)].filter(Boolean),
-      album: text(video?.tname ?? '哔哩哔哩'),
+      album: [text(video?.tname), viewsOf(video) ? `${viewsOf(video)}播放` : ''].filter(Boolean).join(' · ') || '哔哩哔哩',
       image: cover(video?.pic),
       durationMs: durationMs(video?.duration),
     }

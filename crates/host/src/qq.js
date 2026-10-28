@@ -31,13 +31,18 @@
       return found[1]
     }
   }
-  const musicKey = () => cookie('qm_keyst') || cookie('qqmusic_key') || cookie('music_key') || cookie('p_skey') || ''
+  const normalizeUin = (raw) => String(raw ?? '').replace(/\D/g, '').replace(/^0+/, '')
+  // The music key of the session: qm_keyst (HttpOnly, still sent) or the other names QQ Music uses; never p_skey,
+  // which is another login's key (the vkey answer refuses it).
+  const musicKey = () => cookie('qm_keyst') || cookie('qqmusic_key') || cookie('music_key') || cookie('wxskey') || ''
   // The account: QQ Music's own profile answer, asked with the page's cookies (whether or not the cookies can be
   // read here: an HttpOnly qm_keyst is still sent). It says the uin the vkey answer wants, and the membership.
   let signed = false
   let account = { uin: '', nick: '', avatar: null, vip: null }
   let accountAt = 0
-  const uin = () => account.uin || cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || ''
+  // The page's own cookies first: QQ's profile uin can be its encrypted form, and the vkey answer wants the digits.
+  const uin = () =>
+    normalizeUin(cookie('uin') || cookie('qqmusic_uin') || cookie('p_uin') || account.uin)
   // Signed in: the profile said so, or the page's own uin cookie (qm_keyst may be HttpOnly: not read here).
   const signedIn = () => signed || Boolean(uin())
   const vip = () => {
@@ -63,7 +68,7 @@
       }
       const vipType = Number(creator.vipType ?? creator.vip_type ?? creator.isVip ?? 0) || 0
       account = {
-        uin: String(creator.uin ?? creator.encrypt_uin ?? ''),
+        uin: normalizeUin(creator.uin ?? creator.encrypt_uin ?? ''),
         nick: text(creator.nick ?? creator.name),
         avatar: https(creator.headpic ?? creator.avatarUrl ?? creator.avatar),
         vip: vipType > 0 ? 'VIP' : '非VIP',
@@ -317,32 +322,58 @@
     const extension = quality.startsWith('F') ? '.flac' : quality.startsWith('C') ? '.m4a' : '.mp3'
     return `${quality}${mid}${extension}`
   }
+  // The media id a song's files are named by (usually its mid; the account's own answer says when it isn't).
+  const mediaMids = new Map()
+  const mediaMidOf = async (mid) => {
+    if (mediaMids.has(mid)) return mediaMids.get(mid)
+    let media = mid
+    try {
+      const answer = await musicu({
+        comm: { ct: 24, cv: 0 },
+        songinfo: { module: 'music.pf_song_detail_svr', method: 'get_song_detail_yqq', param: { song_mid: mid } },
+      })
+      media = String(answer?.songinfo?.data?.track_info?.file?.media_mid || mid)
+    } catch {
+      // Its mid, then.
+    }
+    mediaMids.set(mid, media)
+    return media
+  }
   const URL_OF = async (song, premium) => {
     await refreshAccount()
     const mid = String(song)
+    const media = await mediaMidOf(mid)
     const qualities = premium
       ? ['F000', 'M800', 'C600', 'M500', 'C400']
       : ['M800', 'C600', 'M500', 'C400']
-    const filenames = qualities.map((quality) => filenameFor(mid, quality))
+    const filenames = qualities.map((quality) => filenameFor(media, quality))
     const key = musicKey()
-    const payload = {
-      comm: { uin: uin() || '0', format: 'json', ct: key ? 19 : 24, cv: 0, ...(key ? { authst: key } : {}) },
-      req_0: {
-        module: 'vkey.GetVkeyServer',
-        method: 'CgiGetVkey',
-        param: {
-          guid: guid(),
-          songmid: filenames.map(() => mid),
-          songtype: filenames.map(() => 0),
-          uin: uin() || '0',
-          loginflag: 1,
-          platform: '20',
-          filename: filenames,
+    const ask = async (comm) => {
+      const answer = await musicu({
+        comm,
+        req_0: {
+          module: 'vkey.GetVkeyServer',
+          method: 'CgiGetVkey',
+          param: {
+            guid: guid(),
+            songmid: filenames.map(() => mid),
+            songtype: filenames.map(() => 0),
+            uin: uin() || '0',
+            loginflag: 1,
+            platform: '20',
+            filename: filenames,
+          },
         },
-      },
+      })
+      return answer?.req_0?.data ?? {}
     }
-    const answer = await musicu(payload)
-    const data = answer?.req_0?.data ?? {}
+    let data = await ask({ uin: uin() || '0', format: 'json', ct: key ? 19 : 24, cv: 0, ...(key ? { authst: key } : {}) })
+    if (!(data.midurlinfo ?? []).some((one) => one?.purl)) {
+      // The key the cookie read gave may not be this login's (another login's p_skey, or none): ask again as the
+      // page itself would, the cookies doing the login.
+      const again = await ask({ uin: uin() || '0', format: 'json', ct: 24, cv: 0 })
+      if ((again.midurlinfo ?? []).some((one) => one?.purl)) data = again
+    }
     const sips = (data.sip ?? []).map(https).filter(Boolean)
     const infos = (data.midurlinfo ?? []).filter((one) => one?.purl)
     for (const info of infos) {
@@ -352,7 +383,7 @@
       }
     }
     debug(
-      `vkey empty login=${signedIn() ? 'yes' : 'no'} uin=${uin() ? 'yes' : 'no'} key=${musicKey() ? 'yes' : 'no'} names=${(data.midurlinfo ?? []).map((one) => one?.result).join(',')}`,
+      `vkey empty login=${signedIn() ? 'yes' : 'no'} uinLen=${uin().length} keyLen=${key.length} wechat=${key.startsWith('W_') ? 'yes' : 'no'} names=${(data.midurlinfo ?? []).map((one) => one?.result).join(',')} media=${media !== mid}`,
     )
     return null
   }

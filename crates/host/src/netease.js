@@ -617,19 +617,29 @@
   // capture it (CORS), asked once per host. NetEase's own CDNs do; another may not, and then the sound stays the
   // page's own (direct output, no cab's 3D sound).
   const captureHosts = new Map()
+  let saidCapture = ''
   const canCapture = async (url) => {
     try {
       const origin = new URL(url).origin
-      if (captureHosts.has(origin)) return captureHosts.get(origin)
+      // Kept when it works; a failure is asked again next time (a CDN's first answer may be a transient one),
+      // never cached, so one bad HEAD doesn't take the truck's speakers from every later song.
+      if (captureHosts.get(origin) === true) return true
       let ok = false
       try {
-        // A HEAD: a simple request (no preflight), whose CORS headers say whether the page can capture it.
-        const response = await pageFetch(url, { method: 'HEAD' })
-        ok = response.ok && response.headers.get('access-control-allow-origin') !== null
+        // A HEAD: a simple request (no preflight). The fetch resolves only if the CDN lets this page read it
+        // (CORS): the request succeeding is the test (`Access-Control-Allow-Origin` is readable too, but a HEAD
+        // the CDN refuses for its own reasons says nothing of the sound's).
+        const response = await pageFetch(url, { method: 'HEAD', cache: 'no-store' })
+        ok = response.ok || response.type === 'opaque'
       } catch {
         ok = false
       }
-      captureHosts.set(origin, ok)
+      if (ok) captureHosts.set(origin, true)
+      const said = `${ok ? 'speakers' : 'direct'} ${origin}`
+      if (said !== saidCapture) {
+        saidCapture = said
+        post({ debug: `capture ${said}` })
+      }
       return ok
     } catch {
       return false

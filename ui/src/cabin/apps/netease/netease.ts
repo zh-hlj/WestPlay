@@ -221,6 +221,11 @@ export function bilibiliVideo(
   if (isInHost()) postToHost({ type: 'bilibili', command })
 }
 
+/** Bilibili's picture quality: its height in pixels (0: the page's own, 720P). */
+export function bilibiliQuality(height: number): void {
+  if (isInHost()) postToHost({ type: 'bilibili', command: { action: 'videoQuality', height } })
+}
+
 export function setSource(source: Source): void {
   if (useNetease.getState().source === source) return
   // The service left stops: two services playing at once (each is its own app now) is never wanted.

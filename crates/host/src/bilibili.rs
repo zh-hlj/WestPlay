@@ -38,6 +38,8 @@ pub enum Command {
     },
     /// Show no video (its sound plays on).
     VideoHide,
+    /// The picture's quality (its height in pixels; 0: the page's own choice).
+    VideoQuality { height: u32 },
     /// Its sign-in, in a window on the desktop (a QR code to scan, as its page has it).
     SignIn,
     /// Forgets its cookies: its page starts signed out.
@@ -203,6 +205,10 @@ impl Bilibili {
             Command::VideoHide => {
                 self.view.show(false)?;
                 let said = serde_json::to_string(command).unwrap_or_default();
+                self.view.post_json(&said)
+            }
+            Command::VideoQuality { height } => {
+                let said = serde_json::to_string(&Command::VideoQuality { height: *height }).unwrap_or_default();
                 self.view.post_json(&said)
             }
             Command::SignOut => {

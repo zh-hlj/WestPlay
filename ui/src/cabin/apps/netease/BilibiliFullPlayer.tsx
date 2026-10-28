@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useText } from '../../state/text'
 import { BilibiliVideoHole, useBilibiliVideo } from './bilibiliVideo'
 import { NextGlyph, PauseGlyph, PlayGlyph, PreviousGlyph } from './glyphs'
-import { clock, playOrPause, positionOf, seek, skip, useNetease } from './netease'
+import { bilibiliQuality, clock, playOrPause, positionOf, seek, skip, useNetease } from './netease'
 
 /**
  * Bilibili full screen: its video over the whole app, its controls over the picture (in the shell's video
@@ -16,6 +16,7 @@ export function BilibiliFullPlayer() {
   const hole = useBilibiliVideo((state) => state.hole)
   // The bar moves between the host's playback messages.
   const [, tick] = useState(0)
+  const [quality, setQuality] = useState(0)
   useEffect(() => {
     const timer = setInterval(() => tick((count) => count + 1), 250)
     return () => clearInterval(timer)
@@ -46,6 +47,31 @@ export function BilibiliFullPlayer() {
         </button>
         <span className="bili-full-title">{playback.track.name}</span>
         <span className="bili-full-by">{playback.track.artists.join(' / ')}</span>
+        <span className="bili-full-quality">
+          {[720, 1080].map((height) => (
+            <button
+              key={height}
+              type="button"
+              className={quality === height ? 'ne-pill on' : 'ne-pill'}
+              onClick={() => {
+                setQuality(height)
+                bilibiliQuality(height)
+              }}
+            >
+              {height}P
+            </button>
+          ))}
+          <button
+            type="button"
+            className={quality === 0 ? 'ne-pill on' : 'ne-pill'}
+            onClick={() => {
+              setQuality(0)
+              bilibiliQuality(0)
+            }}
+          >
+            自动
+          </button>
+        </span>
       </div>
       <div className="bili-full-progress" onPointerDown={at}>
         <span>{clock(position * 1000)}</span>

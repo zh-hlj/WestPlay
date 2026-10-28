@@ -891,6 +891,7 @@ export type BilibiliCommand =
   | NeteaseCommand
   | { action: 'videoShow'; x: number; y: number; width: number; height: number }
   | { action: 'videoHide' }
+  | { action: 'videoQuality'; height: number }
 
 /** What a card or a row is: a song, a playlist, an album, an artist (or a radio). */
 export type NeteaseKind = 'song' | 'playlist' | 'album' | 'artist' | 'radio'

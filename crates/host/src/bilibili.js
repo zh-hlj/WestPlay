@@ -137,6 +137,7 @@
     const data = answer?.data ?? {}
     return { raw: data, track: trackOf(data), item: itemOf(data) }
   }
+  let qualityWanted = 0
   const playUrl = async (bvid, cid) => {
     const answer = await api(
       `/x/player/playurl?bvid=${encodeURIComponent(bvid)}&cid=${encodeURIComponent(cid)}&qn=80&fnval=4048&fourk=1`,
@@ -148,8 +149,9 @@
     const videos = (answer?.data?.dash?.video ?? [])
       .slice()
       .sort((a, b) => Number(a?.height ?? 0) - Number(b?.height ?? 0))
-    // The best up to 720P (lighter than 1080P on the truck's screen), else the smallest.
-    const light = videos.filter((one) => Number(one?.height ?? 0) <= 720)
+    // The best up to the wanted height (default 720P: lighter on the truck's screen), else the smallest.
+    const limit = qualityWanted > 0 ? qualityWanted : 720
+    const light = videos.filter((one) => Number(one?.height ?? 0) <= limit)
     const chosen = light.at(-1) ?? videos.at(-1)
     const picture = chosen?.baseUrl
     const video = [picture, ...(chosen?.backupUrl ?? [])].map(https).filter(Boolean)
@@ -252,6 +254,7 @@
   // (and played) while shown, not for the app's sound-only use.
   let pendingPicture = null
   let pictureShown = false
+  let currentVideo = null
   const hidePageUi = () => {
     if (document.getElementById('westplay-bilibili-style')) return
     const style = document.createElement('style')
@@ -260,6 +263,23 @@
       'body > *:not(#westplay-bilibili-video){visibility:hidden!important}' +
       '#westplay-bilibili-video{position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:2147483647}'
     document.documentElement.appendChild(style)
+  }
+  const changeQuality = async (height) => {
+    qualityWanted = Math.max(0, Number(height) || 0)
+    if (!currentVideo) return
+    try {
+      const media = await playUrl(currentVideo.bvid, currentVideo.cid)
+      pendingPicture = media.video[0] ?? null
+      if (!pictureShown || !pendingPicture) return
+      const at = picture?.currentTime ?? 0
+      await showPicture(pendingPicture)
+      if (picture) {
+        picture.currentTime = at
+        syncPicture()
+      }
+    } catch {
+      // The quality as it was.
+    }
   }
   const syncPicture = () => {
     if (!picture || !element || !picture.src) return
@@ -311,6 +331,7 @@
       audio.src = await sourceOf(url)
       await audio.play().catch((e) => debug(`audio play failed ${String(e).slice(0, 80)}`))
       pendingPicture = media.video[0] ?? null
+      currentVideo = { bvid: track.id, cid }
       if (pictureShown) await showPicture(pendingPicture)
       tellPlayback()
       tellState(true)
@@ -480,6 +501,8 @@
       } else if (data?.action === 'videoHide') {
         pictureShown = false
         picture?.pause()
+      } else if (data?.action === 'videoQuality') {
+        void changeQuality(data.height)
       }
       else if (data?.action === 'ask') answer(data.id, data.question)
       else Promise.resolve(CONTROLS[data?.action]?.(data)).catch(() => {})

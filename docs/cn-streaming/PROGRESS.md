@@ -208,3 +208,9 @@
 - GitHub 恢复：已把 `a71dcc4` 及之前全部本地提交推送到 `feature/cn-streaming`；原版 `origin/main` 仍为 de6e887。
 - preview16 CI 成功（对应 7348c53）；本版 preview17 将包含之后的 B 站全屏进度条/洞交接/隐藏暂停/排行榜、网易云 CORS 探测修复、QQ vkey 修复。
 - 已下载/待下载 preview16 资产不单独发布；以 preview17 为准。
+
+## 2026-10-28 · 里程碑 23：B 站清晰度切换（preview18）
+
+- host `bilibili.rs` 加 `VideoQuality { height }` 并转发页面；页面按 720P/1080P/自动重取 playurl 视频地址，切换时保持播放位置重载画面。
+- 全屏播放器右上角加 720P/1080P/自动按钮。
+- 校验：tsc 0；vitest 451；host 212 passed。

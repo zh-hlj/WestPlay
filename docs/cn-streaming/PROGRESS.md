@@ -124,3 +124,10 @@
 - 内嵌 exe 签名尝试失败：先签 app 再 `tauri build` 会被重链接覆盖；`tauri bundle` 后内嵌 exe 签名 HashMismatch（Tauri 打包改动了 exe）→ 已撤回，preview7 删除；preview8 恢复单次构建 + 安装包/便携 exe 签名。
 - 结论：安装后 exe 签名需 Tauri `bundle.windows.signCommand`（在打包时签）或付费证书，属未完成项。
 - preview8 验证：SHA 全 match；portable exe 已签名；CI 成功。
+
+## 2026-10-28 · 里程碑 12：音量修复 + 三个服务拆成独立 App
+
+- 音量：`cab_sound.js` 在捕获页面音频后加 Volume GainNode，每个 tick 跟随页面元素 `volume/muted`（Web Audio 捕获后元素自身音量不生效，这是 3D 声场下音量键失效的原因）。
+- 拆分：`APPS` 新增 `qq` / `bilibili`；Home/Sidebar 各显示独立图标（新画 `qq.*.svg`、`bilibili.*.svg`）；AppScreen 分别打开 `NetEaseApp only="netease|qq|bilibili"`，打开时 `setSource` 锁定来源，移除了 App 内的来源切换按钮。
+- 验证：tsc 0 错误；vitest 64 文件 / 451 测试全过；app 列表测试更新。
+- 待构建：preview10（含 Tauri signCommand 内嵌 exe 签名尝试）。

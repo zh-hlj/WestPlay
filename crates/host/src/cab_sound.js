@@ -175,11 +175,16 @@ window.westplayCabSound = (media, say) => {
     audio.meters = null
     audio.wired = speakers
     const keep = (node) => (audio.nodes.push(node), node)
-    // First of all, the tone.
+    // First of all, the volume the page's element has (0 to 1, muted: 0): once its sound is taken into the
+    // context, the element's own volume no longer reaches the speakers (Web Audio takes the sound before it).
+    const volume = keep(new GainNode(context, { gain: 1 }))
+    audio.volume = volume
+    // Then the tone.
     const bands = TONE.map(([, options]) => keep(new BiquadFilterNode(context, options)))
     const trim = keep(new GainNode(context))
     bands.reduce((from, to) => (from.connect(to), to)).connect(trim)
-    audio.source.connect(bands[0])
+    audio.source.connect(volume)
+    volume.connect(bands[0])
     audio.tone = { bands, trim }
     setTone(true)
     // Beside it, the spectrum's ear (measuring, playing nothing).
@@ -319,11 +324,15 @@ window.westplayCabSound = (media, say) => {
         muffle(cut)
       } catch {}
     },
-    // Each pass: the speakers' way on the element there is now (the page may make a new one); the sound's
-    // context woken if it sleeps.
+    // Each pass: the speakers' way on the element there is now (the page may make a new one); the element's
+    // volume (the page's slider, the keybinds) on it; the sound's context woken if it sleeps.
     tick() {
       try {
         wire()
+        if (audio?.volume && audio.video) {
+          const wanted = audio.video.muted ? 0 : Math.min(1, Math.max(0, Number(audio.video.volume)))
+          audio.volume.gain.setTargetAtTime(wanted, audio.context.currentTime, 0.03)
+        }
         if (audio?.context.state === 'suspended') audio.context.resume()
       } catch {}
     },

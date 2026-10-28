@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useKeyboard } from '../../keyboard/store'
 import { TextField } from '../../keyboard/TextField'
 import { useText } from '../../state/text'
@@ -6,6 +6,7 @@ import { BackGlyph, MarkGlyph, NoteCloudGlyph, PersonGlyph, SearchGlyph } from '
 import { MiniPlayer, NowPlaying } from './NowPlaying'
 import { Home, Mine, Page, Search, Typing } from './pages'
 import {
+  type Source,
   type Tab,
   TABS,
   goBack,
@@ -31,8 +32,13 @@ const FIELD = 'netease-search'
  * TODO(verify): NetEase's own app, on a phone: its top bar and its tabs' order and words (Home, Search, Mine),
  * its Now Playing's layout, and the colours and type below (netease.css) are drawn from memory for the cab.
  */
-export function NetEaseApp() {
+export function NetEaseApp({ only }: { only?: Source } = {}) {
   const text = useText()
+  // A separate app for each service (Home's NetEase/QQ/Bilibili): opening one shows its own, not the last
+  // one opened.
+  useLayoutEffect(() => {
+    if (only) setSource(only)
+  }, [only])
   const source = useNetease((state) => state.source)
   const tab = useNetease((state) => state.tab)
   const views = useNetease((state) => state.views)
@@ -119,27 +125,7 @@ export function NetEaseApp() {
             <b>{words.sources[source]}</b>
           </span>
         )}
-        {!searching && (
-          <span className="ne-sources">
-            <button
-              type="button"
-              className={source === 'netease' ? 'ne-pill on' : 'ne-pill'}
-              onClick={() => setSource('netease')}
-            >
-              {words.sources.netease}
-            </button>
-            <button type="button" className={source === 'qq' ? 'ne-pill on' : 'ne-pill'} onClick={() => setSource('qq')}>
-              {words.sources.qq}
-            </button>
-            <button
-              type="button"
-              className={source === 'bilibili' ? 'ne-pill on' : 'ne-pill'}
-              onClick={() => setSource('bilibili')}
-            >
-              {words.sources.bilibili}
-            </button>
-          </span>
-        )}
+
         {searching ? (
           <div className="ne-search">
             <TextField

@@ -85,7 +85,11 @@ function AppContent({ app }: { app: AppId }) {
     case 'youtubeMusic':
       return <YouTubeMusicApp />
     case 'netease':
-      return <NetEaseApp />
+      return <NetEaseApp only="netease" />
+    case 'qq':
+      return <NetEaseApp only="qq" />
+    case 'bilibili':
+      return <NetEaseApp only="bilibili" />
     case 'settings':
       return <SettingsApp />
     case 'weather':

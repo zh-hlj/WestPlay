@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!--
+    WestPlay's own placeholder for the Bilibili app's icon: a pink rounded mark with a drawn little TV (not
+    Bilibili's own mark: a stand-in, to be replaced with a compliant one).
+  -->
+  <rect x="48" y="48" width="928" height="928" rx="210" fill="#1b1b1d" />
+  <rect x="216" y="216" width="592" height="592" rx="150" fill="#fb7299" />
+  <path d="M360 286l92 92h120l92-92" stroke="#ffffff" stroke-width="34" stroke-linecap="round" fill="none" />
+  <rect x="300" y="404" width="424" height="284" rx="58" fill="none" stroke="#ffffff" stroke-width="34" />
+  <circle cx="418" cy="520" r="26" fill="#ffffff" />
+  <circle cx="606" cy="520" r="26" fill="#ffffff" />
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!--
+    WestPlay's own placeholder for the QQ Music app's icon: a green mark with a drawn note (not QQ Music's own
+    mark: a stand-in, to be replaced with a compliant one).
+  -->
+  <rect x="48" y="48" width="928" height="928" rx="210" fill="#f6f6f6" />
+  <rect x="216" y="216" width="592" height="592" rx="150" fill="#31c27c" />
+  <path d="M594 302c-7 0-13 5-14 12l-68 214c-17-10-38-16-60-16-54 0-98 35-98 79s44 79 98 79c53 0 96-34 98-77l44-140 44 18c10 4 21-3 21-14v-27c0-6-4-11-9-13l-41-16 15-46 22 9c10 4 21-3 21-14v-27c0-6-4-11-9-13z" fill="#ffffff" />
+</svg>

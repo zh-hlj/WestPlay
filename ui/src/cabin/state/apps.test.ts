@@ -10,6 +10,8 @@ describe('the apps this release has', () => {
       'youtube',
       'youtubeMusic',
       'netease',
+      'qq',
+      'bilibili',
       'weather',
       'settings',
     ])

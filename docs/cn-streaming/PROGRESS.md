@@ -24,3 +24,11 @@
 2. QQ 音乐：参考 `Mineradiorr/Mineradio-paused` 的账号/接口方案，先做 web 数据抓取 + 组件 + 列表播放；
 3. 哔哩哔哩：调研登录方案并实施；
 4. 卡车音响 3D 音效；漏洞修复与全量自测。
+
+## 2026-10-28 · 里程碑 2：2.1.3 MSVC 构建与发布（预览版 1）
+
+- CI 工作流适配 2.1.3：MSVC 构建安装包 + 便携包、自签名证书 + 信任脚本、安装器写入修复、Release 自动挂载。
+- Release：`v2.1.3-cn-preview1`（https://github.com/zh-hlj/WestPlay/releases/tag/v2.1.3-cn-preview1）。
+- 产物验证：portable `westplay.exe` 2.1.3、已签名；安装包已签名；UI bundle 含 `NetEase Cloud Music`；`SHA256SUMS.txt` 校验通过。
+- 待办：安装包内嵌的 `westplay.exe` 当前未签名（下一个构建调整签名顺序）；QQ/B站/3D 声场未开始。
+- 已知：GitHub Actions（windows-latest）构建成功，运行级真机验证待做。

@@ -205,6 +205,18 @@ pub struct OffscreenWebView {
 impl OffscreenWebView {
     /// A WebView of `width` x `height` on `stage`'s compositor (not on the frame until [`Stage::add`]).
     pub fn new(stage: &Stage, width: u32, height: u32, user_data: &Path) -> Result<Self, Error> {
+        Self::new_with_arguments(stage, width, height, user_data, "")
+    }
+
+    /// As [`Self::new`], with extra Chromium arguments for this WebView's own environment (each profile has
+    /// its own WebView2 browser, so an argument here does not reach the other services).
+    pub fn new_with_arguments(
+        stage: &Stage,
+        width: u32,
+        height: u32,
+        user_data: &Path,
+        extra_arguments: &str,
+    ) -> Result<Self, Error> {
         let root = stage.compositor.CreateContainerVisual()?;
         root.SetSize(Vector2 { X: width as f32, Y: height as f32 })?;
 
@@ -239,7 +251,7 @@ impl OffscreenWebView {
             let _ = EnableWindow(host, false);
         }
 
-        let environment = create_environment(user_data)?;
+        let environment = create_environment(user_data, extra_arguments)?;
         // SAFETY: WebView2 writes a CoTaskMem string into `version`, read before it's dropped.
         let version = unsafe {
             let mut version = PWSTR::null();
@@ -719,13 +731,16 @@ fn process_failure(kind: COREWEBVIEW2_PROCESS_FAILED_KIND) -> String {
     name.to_owned()
 }
 
-fn create_environment(user_data: &Path) -> Result<ICoreWebView2Environment, Error> {
+fn create_environment(user_data: &Path, extra_arguments: &str) -> Result<ICoreWebView2Environment, Error> {
     let options = CoreWebView2EnvironmentOptions::default();
     // Chromium throttles or stops rendering for hidden or occluded windows; ours is never shown.
     let mut arguments = "--disable-features=CalculateNativeWinOcclusion --disable-background-timer-throttling \
                          --disable-renderer-backgrounding --disable-backgrounding-occluded-windows \
                          --autoplay-policy=no-user-gesture-required"
         .to_string();
+    if !extra_arguments.is_empty() {
+        arguments = format!("{arguments} {extra_arguments}");
+    }
     // The GPU it draws on (graphics.rs).
     if let Some(gpu) = GPU_ARGUMENT.lock().unwrap_or_else(|e| e.into_inner()).as_deref() {
         arguments = format!("{arguments} {gpu}");

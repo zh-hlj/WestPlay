@@ -32,3 +32,10 @@
 - 产物验证：portable `westplay.exe` 2.1.3、已签名；安装包已签名；UI bundle 含 `NetEase Cloud Music`；`SHA256SUMS.txt` 校验通过。
 - 待办：安装包内嵌的 `westplay.exe` 当前未签名（下一个构建调整签名顺序）；QQ/B站/3D 声场未开始。
 - 已知：GitHub Actions（windows-latest）构建成功，运行级真机验证待做。
+
+## 2026-10-28 · 里程碑 3（进行中）：QQ 音乐基础
+
+- 上游同步：仍为 v2.1.3 `de6e887`，无新提交。
+- `webview.rs`：新增 `OffscreenWebView::new_with_arguments`，每个 WebView 可带自己的 Chromium 参数（QQ 用 `--disable-web-security` 读跨域接口，只影响 QQ 自己的 profile）；`cargo check -p westplay-host` 通过。
+- QQ 设计文档：`docs/cn-streaming/QQ.md`（架构/接口/登录/风险/步骤，接口与签名算法取自 Mineradio-paused）。
+- 下一步：`qq.rs` + `qq.js` + 登录窗口 + UI 组件。

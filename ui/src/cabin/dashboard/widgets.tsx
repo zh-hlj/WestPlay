@@ -29,6 +29,7 @@ import { useLive } from '../state/store'
 import { useText } from '../state/text'
 import { nearestCity } from './destination'
 import { useNowPlaying } from './useNowPlaying'
+import { DashboardLyrics } from './DashboardLyrics'
 import { weatherView } from './weather'
 import { WeatherGlyph } from './WeatherGlyph'
 import { EMPTY, useDestinationView, useGuided } from './widgetState'
@@ -102,6 +103,7 @@ function NeteaseWidget({ netease }: { netease: NonNullable<ReturnType<typeof use
     <MusicWidget
       source={netease.source}
       artwork={netease.artwork}
+      lyrics
       onOpen={() => {
         useNetease.setState({ nowPlaying: true })
         go({ type: 'openApp', app })
@@ -142,11 +144,13 @@ function SpotifyWidget({ spotify }: { spotify: NonNullable<ReturnType<typeof use
 function MusicWidget({
   source,
   artwork,
+  lyrics,
   onOpen,
   onControl,
 }: {
   source: MediaSource | null
   artwork: string | null
+  lyrics?: boolean
   onOpen?(): void
   onControl(action: MediaAction): void
 }) {
@@ -158,7 +162,7 @@ function MusicWidget({
   const text = useText()
 
   return (
-    <article className="widget glass now-playing">
+    <article className={lyrics ? 'widget glass now-playing with-lyrics' : 'widget glass now-playing'}>
       <Crossfade value={cover} className="np-tint" render={(url) => url && <img src={url} alt="" aria-hidden />} />
       <button type="button" className="np-top" onClick={onOpen} disabled={!onOpen}>
         <Crossfade
@@ -186,6 +190,7 @@ function MusicWidget({
           )}
         />
       </button>
+      {lyrics && <DashboardLyrics />}
       <div className="controls">
         <button
           type="button"

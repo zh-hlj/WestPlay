@@ -350,33 +350,65 @@
   }
 }
 
-/* The music card's lyrics, as a car's own card shows them: the line being sung in the accent, the ones around
-   it dim; smaller printing and a smaller cover when the card carries them (a widget has one job and the room
-   of a third of the screen). */
+/* The music card with lyrics (dashboard/DashboardLyrics.tsx): a car's own music card, dark over the map, the
+   title at its top, the lines of the song at its foot with the sung one in the accent, then the artist, how far
+   the song is and the controls. It keeps its content's height and floats in the widget column's middle. */
 .now-playing.with-lyrics {
-  padding: 14px 20px;
-  gap: 6px;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 100%;
+  max-height: 100%;
+  margin: auto 0;
+  padding: 26px 26px 20px;
+  gap: 14px;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  background: linear-gradient(165deg, rgb(26 24 28 / 0.86), rgb(12 12 14 / 0.74));
+  box-shadow:
+    0 24px 70px rgb(0 0 0 / 0.45),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(30px) saturate(1.2);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+}
+
+.now-playing.with-lyrics .np-top {
+  padding: 0;
+  gap: 0;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .now-playing.with-lyrics .art {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  display: none;
+}
+
+.now-playing.with-lyrics .track {
+  min-width: 0;
+  text-align: left;
 }
 
 .now-playing.with-lyrics .title {
-  font-size: calc(19px * var(--text-scale, 1));
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: calc(27px * var(--text-scale, 1));
+  font-weight: 680;
+  line-height: 1.25;
+  color: #fff;
 }
 
 .now-playing.with-lyrics .artist {
-  font-size: calc(15px * var(--text-scale, 1));
+  display: none;
 }
 
 .np-lyrics {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 6px;
   min-height: 0;
+  margin-top: 6px;
   overflow: hidden;
   text-align: left;
 }
@@ -385,25 +417,56 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  line-height: 1.25;
+  line-height: 1.3;
   transition: color 220ms ease;
 }
 
-.np-lyric.prev,
-.np-lyric.next {
-  font-size: calc(16px * var(--text-scale, 1));
-  color: var(--text-dim);
-  opacity: 0.85;
+.np-lyric.prev {
+  font-size: calc(19px * var(--text-scale, 1));
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.52);
 }
 
 .np-lyric.current {
-  font-size: calc(21px * var(--text-scale, 1));
+  font-size: calc(26px * var(--text-scale, 1));
   font-weight: 700;
   color: #ffd166;
-  text-shadow: 0 1px 10px rgb(0 0 0 / 0.25);
+  text-shadow: 0 2px 14px rgb(0 0 0 / 0.3);
+}
+
+.np-artist {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: calc(16px * var(--text-scale, 1));
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.45);
+}
+
+.np-progress {
+  display: block;
+  height: 3px;
+  margin: 2px 0 8px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.16);
+  overflow: hidden;
+}
+
+.np-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffd166, #ffb84d);
+}
+
+.now-playing.with-lyrics .controls {
+  padding: 0;
+  justify-content: center;
+  gap: 26px;
 }
 
 .now-playing.with-lyrics .controls button {
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 54px;
+  color: rgb(255 255 255 / 0.92);
 }

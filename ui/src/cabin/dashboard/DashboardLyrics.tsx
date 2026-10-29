@@ -3,9 +3,9 @@ import type { Playback } from '../apps/netease/netease'
 import { useCabin } from '../state/store'
 
 /**
- * The lyrics in the Dashboard's Now Playing card, the way a car's own music card shows them (Settings › Now
- * Playing › Show Lyrics): the line being sung, the one before and the one after, the sung one in the accent.
- * No synced lyrics (or the setting off): the card is as it was.
+ * The lyrics in the Dashboard's music card, the way a car's own card shows them (Settings › Now Playing › Show
+ * Lyrics): the line being sung at the card's foot in the accent, the one or two before it dim above; under it
+ * the artist and how far the song is. No synced lyrics (or the setting off): the card is as it was.
  */
 export function DashboardLyrics() {
   const show = useCabin((state) => state.showLyrics)
@@ -25,11 +25,19 @@ function Lines({ playback }: { playback: Playback }) {
   const line = lyrics.lines[current]
   if (!line || !line.text.trim()) return null
   const text = (offset: number) => lyrics.lines[current + offset]?.text.trim() || ''
+  const duration = playback.duration
+  const share = duration > 0 ? Math.max(0, Math.min(1, position / duration)) : 0
   return (
-    <div className="np-lyrics" aria-hidden>
-      <span className="np-lyric prev">{text(-1) || '\u00a0'}</span>
-      <span className="np-lyric current">{line.text}</span>
-      <span className="np-lyric next">{text(1) || '\u00a0'}</span>
-    </div>
+    <>
+      <div className="np-lyrics" aria-hidden>
+        <span className="np-lyric prev">{text(-2) || '\u00a0'}</span>
+        <span className="np-lyric prev">{text(-1) || '\u00a0'}</span>
+        <span className="np-lyric current">{line.text}</span>
+      </div>
+      <span className="np-artist">{playback.track.artists.join(' / ')}</span>
+      <span className="np-progress" aria-hidden>
+        <i style={{ width: `${(share * 100).toFixed(1)}%` }} />
+      </span>
+    </>
   )
 }

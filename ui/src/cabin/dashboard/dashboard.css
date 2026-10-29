@@ -350,19 +350,20 @@
   }
 }
 
-/* The music card with lyrics (dashboard/DashboardLyrics.tsx): a car's own music card, dark over the map, the
-   title at its top, the lines of the song at its foot with the sung one in the accent, then the artist, how far
-   the song is and the controls. It keeps its content's height and floats in the widget column's middle. */
+/* The music card with lyrics (dashboard/DashboardLyrics.tsx): a car's own music card. With no guidance above
+   it, it fills the widget column and prints larger; with guidance, that keeps its own room at the column's top
+   and the card takes what is left, at a size that fits. */
 .now-playing.with-lyrics {
-  flex: 0 0 auto;
-  align-self: center;
+  flex: 1 1 auto;
+  align-self: stretch;
   width: 100%;
-  max-height: 100%;
-  margin: auto 0;
-  padding: 26px 26px 20px;
-  gap: 14px;
+  height: 100%;
+  margin: 0;
+  padding: 28px 26px 22px;
+  gap: 16px;
   flex-direction: column;
   align-items: stretch;
+  justify-content: center;
   overflow: hidden;
   background: linear-gradient(165deg, rgb(26 24 28 / 0.86), rgb(12 12 14 / 0.74));
   box-shadow:
@@ -393,7 +394,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: calc(27px * var(--text-scale, 1));
+  font-size: calc(30px * var(--text-scale, 1));
   font-weight: 680;
   line-height: 1.25;
   color: #fff;
@@ -406,7 +407,7 @@
 .np-lyrics {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   min-height: 0;
   margin-top: 6px;
   overflow: hidden;
@@ -422,13 +423,13 @@
 }
 
 .np-lyric.prev {
-  font-size: calc(19px * var(--text-scale, 1));
+  font-size: calc(21px * var(--text-scale, 1));
   font-weight: 500;
   color: rgb(255 255 255 / 0.52);
 }
 
 .np-lyric.current {
-  font-size: calc(26px * var(--text-scale, 1));
+  font-size: calc(29px * var(--text-scale, 1));
   font-weight: 700;
   color: #ffd166;
   text-shadow: 0 2px 14px rgb(0 0 0 / 0.3);
@@ -438,7 +439,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: calc(16px * var(--text-scale, 1));
+  font-size: calc(17px * var(--text-scale, 1));
   font-weight: 500;
   color: rgb(255 255 255 / 0.45);
 }
@@ -466,7 +467,45 @@
 }
 
 .now-playing.with-lyrics .controls button {
-  width: 54px;
-  height: 54px;
+  width: 56px;
+  height: 56px;
   color: rgb(255 255 255 / 0.92);
+}
+
+/* No guidance above it: the card has the column, and prints at the size that is worth it. */
+ .now-playing.with-lyrics.filled {
+  padding: 40px 32px 30px;
+  gap: 18px;
+  justify-content: flex-start;
+}
+
+.now-playing.with-lyrics.filled .title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  font-size: calc(34px * var(--text-scale, 1));
+  line-height: 1.18;
+}
+
+.now-playing.with-lyrics.filled .np-lyrics {
+  gap: 11px;
+  margin: auto 0;
+}
+
+.now-playing.with-lyrics.filled .np-lyric.prev {
+  font-size: calc(27px * var(--text-scale, 1));
+}
+
+.now-playing.with-lyrics.filled .np-lyric.current {
+  font-size: calc(40px * var(--text-scale, 1));
+}
+
+.now-playing.with-lyrics.filled .np-artist {
+  font-size: calc(20px * var(--text-scale, 1));
+}
+
+.now-playing.with-lyrics.filled .controls button {
+  width: 66px;
+  height: 66px;
 }

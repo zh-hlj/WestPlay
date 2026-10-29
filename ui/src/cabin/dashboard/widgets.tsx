@@ -99,11 +99,13 @@ function NeteaseWidget({ netease }: { netease: NonNullable<ReturnType<typeof use
   // The three services are separate apps now: open the one the music is from.
   const service = useNetease((state) => state.source)
   const app = service === 'qq' ? 'qq' : service === 'bilibili' ? 'bilibili' : 'netease'
+  const guidance = useGuided()
   return (
     <MusicWidget
       source={netease.source}
       artwork={netease.artwork}
       lyrics
+      guidance={guidance}
       onOpen={() => {
         useNetease.setState({ nowPlaying: true })
         go({ type: 'openApp', app })
@@ -145,16 +147,19 @@ function MusicWidget({
   source,
   artwork,
   lyrics,
+  guidance,
   onOpen,
   onControl,
 }: {
   source: MediaSource | null
   artwork: string | null
   lyrics?: boolean
+  guidance?: boolean
   onOpen?(): void
   onControl(action: MediaAction): void
 }) {
   const transition = useTrackTransition(source, artwork)
+  const filled = Boolean(lyrics && !guidance)
   const albumArt = useCabin((state) => state.albumArt)
   const cover = albumArt ? (transition.shown?.artwork ?? null) : null
   const controls = source?.controls
@@ -162,7 +167,7 @@ function MusicWidget({
   const text = useText()
 
   return (
-    <article className={lyrics ? 'widget glass now-playing with-lyrics' : 'widget glass now-playing'}>
+    <article className={['widget glass now-playing', lyrics ? 'with-lyrics' : '', filled ? 'filled' : ''].filter(Boolean).join(' ')}>
       <Crossfade value={cover} className="np-tint" render={(url) => url && <img src={url} alt="" aria-hidden />} />
       <button type="button" className="np-top" onClick={onOpen} disabled={!onOpen}>
         <Crossfade
